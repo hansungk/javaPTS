@@ -26,6 +26,7 @@ public class Main {
 	static CanvasFrame canvas2; // Canvas for showing original(BW) image
 	static CanvasFrame canvas3;
 	static CanvasFrame canvas4;
+	static CanvasFrame canvas5; //Canvas for Sobel
 
 	/// FFmpeg variables
 	static FrameGrabber grabber;
@@ -40,6 +41,7 @@ public class Main {
 	IplImage imgCandidate;	// Candidate image
 	IplImage imgResult;	// result image
 	IplImage imgBall; //Ball Image
+	IplImage imgSobel; //Sobel Image
 
 	/// Width and height of original frame
 	static CvSize _size;
@@ -89,6 +91,7 @@ public class Main {
 		canvas2 = new CanvasFrame("blackwhite", CV_WINDOW_AUTOSIZE);
 		canvas3 = new CanvasFrame("ball", CV_WINDOW_AUTOSIZE);
 		canvas4 = new CanvasFrame("Candidates", CV_WINDOW_AUTOSIZE);
+		canvas5 = new CanvasFrame("Sobel", CV_WINDOW_AUTOSIZE);
 
 		// Initialize FrameRecorder/FrameGrabber
 		recorder = new FFmpegFrameRecorder(PATH + "video/trash.mp4", 640, 480);
@@ -109,6 +112,7 @@ public class Main {
 		cvCopy(grab(), m.imgTmpl_prev);
 
 		m.imgCandidate = cvCreateImage(_size, IPL_DEPTH_8U, 1);
+		m.imgSobel = cvCreateImage(_size, IPL_DEPTH_8U,1);
 
 
 		while (true) {
@@ -128,6 +132,7 @@ public class Main {
 			canvas2.showImage(m.imgBW);
 			canvas3.showImage(m.imgBall);
 			canvas4.showImage(m.imgCandidate);
+			canvas5.showImage(m.imgSobel);
 
 			// Don't forget to do this!!!
 			m.cvReleaseAll();		
@@ -170,7 +175,8 @@ public class Main {
 		canvas1.dispose();		
 		canvas2.dispose();
 		canvas3.dispose();
-		canvas4.dispose();		
+		canvas4.dispose();	
+		canvas5.dispose();
 
 		System.out.println("(TERMINATED)");
 	}
@@ -243,6 +249,7 @@ public class Main {
 		imgBlob = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		imgBW = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		imgResult = cvCreateImage(_size, IPL_DEPTH_8U, 1);
+		imgSobel = cvCreateImage(_size,IPL_DEPTH_8U,1);
 		cvCvtColor(imgTmpl, imgBW, CV_RGB2GRAY);
 		
 		binary = new int[width][height];
@@ -259,6 +266,8 @@ public class Main {
 		Blob_Labeling bl;
 		List<Info> blobs;
 		IplImage imgRecovery;
+		
+		cvSobel(imgBW,imgSobel,2,0,3);
 
 		switch (flag_BW) {
 		case 'c' :
@@ -655,5 +664,6 @@ public class Main {
 		cvReleaseImage(imgTmpl);
 		//cvReleaseImage(imgTmpl_prev);
 		cvReleaseImage(imgCandidate);
+		cvReleaseImage(imgSobel);
 	}
 }
