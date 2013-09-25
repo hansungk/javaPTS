@@ -70,6 +70,7 @@ public class Candidate {
 		this.x_ROIWidth = cd.x_ROIWidth;
 		this.y_ROIWidth = cd.y_ROIWidth;
 		// update();
+		// new
 	}
 	
 	public void add(Simple toAdd) {
