@@ -94,11 +94,11 @@ public class Main {
 		canvas5 = new CanvasFrame("Sobel", CV_WINDOW_AUTOSIZE);
 
 		// Initialize FrameRecorder/FrameGrabber
+		grabber = new FFmpegFrameGrabber(PATH + "video/2.mp4");
+		grabber.start();
 		recorder = new FFmpegFrameRecorder(PATH + "video/trash.mp4", 640, 480);
 		recorder.setFrameRate(30);
 		recorder.start();
-		grabber = new FFmpegFrameGrabber(PATH + "video/2.mp4");
-		grabber.start();
 
 		// Get frame size
 		_size = cvGetSize(grab());
@@ -267,7 +267,8 @@ public class Main {
 		List<Info> blobs;
 		IplImage imgRecovery;
 		
-		cvSobel(imgBW,imgSobel,2,0,3);
+		//cvSobel(imgBW,imgSobel,2,0,3);
+		cvLaplace(imgBW,imgSobel,3);
 
 		switch (flag_BW) {
 		case 'c' :

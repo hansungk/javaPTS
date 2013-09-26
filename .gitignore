@@ -1,4 +1,8 @@
 
+# Java Files #
+*.class
+
 # Package Files #
 *.war
 *.ear
+/video
