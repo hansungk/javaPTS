@@ -6,6 +6,11 @@ import static com.googlecode.javacv.cpp.opencv_highgui.*;
 import static com.googlecode.javacv.cpp.opencv_video.cvCalcOpticalFlowPyrLK;
 
 import java.awt.event.KeyEvent;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.googlecode.javacv.CanvasFrame;
 import com.googlecode.javacv.FrameGrabber;
@@ -34,7 +39,7 @@ public class Main_SingleImage {
 	IplImage imgTemp;
 	
 	
-	public static void main(String[] args) throws InterruptedException {
+	public static void main(String[] args) throws InterruptedException, FileNotFoundException, UnsupportedEncodingException {
 		Main_SingleImage m = new Main_SingleImage();
 		CvSize _size = new CvSize(200, 300);
 		CvSize _winSize = new CvSize(10,10);
@@ -103,12 +108,18 @@ public class Main_SingleImage {
 					cvTermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, .3),
 					0
 					);
-			
+			System.out.println("CornerB: " + cornersB.get().length);
+			System.out.println(m.doubleArrayToString(cornersB.get()));
 			// Show what we are looking at
 			float errorCriteria = 500.0f;
+			List<double[]> successFlowsL = new ArrayList<double[]>();
 			for (int i=0; i<cornerCount[0]; i++) {
-				CvPoint p0 = new CvPoint((int)Math.round(cornersA.get()[2*i]), (int)Math.round(cornersA.get()[2*i+1]));
-				CvPoint p1 = new CvPoint((int)Math.round(cornersB.get()[2*i]), (int)Math.round(cornersB.get()[2*i+1]));
+				double p0x = cornersA.get()[2*i];
+				double p0y = cornersA.get()[2*i+1];
+				double p1x = cornersB.get()[2*i];
+				double p1y = cornersB.get()[2*i+1];
+				CvPoint p0 = new CvPoint((int)p0x, (int)p0y);
+				CvPoint p1 = new CvPoint((int)p1x, (int)p1y);
 				
 				System.out.print("Status of " + (i+1) + " [" + p0.x() + "," + p0.y() + "]	: " + status[i]);
 				
@@ -118,11 +129,18 @@ public class Main_SingleImage {
 				} else if (featureErrors[i] > errorCriteria) {
 					System.out.println("	<<< Error -- Too long error (" + featureErrors[i] + ", criteria:" + errorCriteria + ")");
 					continue;
-				} else {System.out.println();}
-							
+				} else { // Passed the test!
+					System.out.println();
+					successFlowsL.add(new double[] {p1x-p0x, p1y-p0y});
+				}							
 				cvLine(m.imgResult, p0, p1, CV_RGB(0, 255, 0), 2, 0, 0);
 			}
+			double[][] successFlows = new double[successFlowsL.size()][2];
+			successFlowsL.toArray(successFlows);
+			findBgMovement(successFlows);
+			
 			canvas3.showImage(m.imgResult);
+			cvSaveImage(PATH+"opticalflow.jpg", m.imgResult);
 
 			KeyEvent key = canvas1.waitKey(0);
 			if (key != null) {
@@ -142,12 +160,32 @@ public class Main_SingleImage {
 		canvas2.dispose();
 		canvas3.dispose();
 		System.out.println("[TERMINATED]");
-	}	
+	}
+	
+	public static void findBgMovement(double[][] flows) throws FileNotFoundException, UnsupportedEncodingException {
+		int flowsCount = flows.length;
+		System.out.println("Successful: " + flowsCount);
+		PrintWriter writer = new PrintWriter(PATH+"theta.txt", "cp949");
+		double sum=0;
+		for(int i=0; i<flowsCount; i++) {
+			double theta = Math.atan2(flows[i][1], flows[i][0]);
+			writer.println(theta / Math.PI * 180.0);
+			sum += theta;	// Remember that Y-axis is flipped!!!
+		}
+		writer.close();
+		writer = new PrintWriter(PATH+"distance.txt","cp949");
+				
+		for(int i=0; i<flowsCount; i++) {
+			double euclidlength = Math.sqrt(flows[i][0]*flows[i][0] + flows[i][1]*flows[i][1]);
+			writer.println(euclidlength);
+		}
+		writer.close();
+	}
 	
 	public String doubleArrayToString(double[] ds) {
 		String result = "";
 		for(int i=0; i<ds.length; i++) {
-			result += ds[i] + " ";
+			result += (ds[i] + " ");
 		}
 		return result;
 	}
