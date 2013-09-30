@@ -266,6 +266,7 @@ public class Main_SingleImage {
 		System.out.println("2nd probable distance count: " + probableDRoomCount2);
 		//for(double d : drooms.get(probableDRoom1)) System.out.print(d);
 		sum1 = 0; sum2 = 0;
+		
 		for (double d : drooms.get(probableDRoom1)) {sum1 += d;}
 		for (double d : drooms.get(probableDRoom2)) {sum2 += d;}
 		double probableDistance1 = sum1 / probableDRoomCount1;
