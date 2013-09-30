@@ -706,4 +706,11 @@ public class Main {
 		
 		cvReleaseImage(imgSobel);
 	}
+	public String doubleArrayToString(double[] ds) {
+		String result = "";
+		for(int i=0; i<ds.length; i++) {
+			result += ds[i] + " ";
+		}
+		return result;
+	}
 }
