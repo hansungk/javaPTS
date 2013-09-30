@@ -1,4 +1,3 @@
-
 # Java Files #
 *.class
 
@@ -6,6 +5,7 @@
 *.war
 *.ear
 /video
+.classpath
 
 # Log Files #
 *.log
