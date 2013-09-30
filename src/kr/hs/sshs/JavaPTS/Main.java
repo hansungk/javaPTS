@@ -19,7 +19,7 @@ import com.googlecode.javacv.cpp.opencv_core.IplImage;
 
 public class Main {
 	/// Path to store resources
-	private static String PATH = "video/";
+	private static String PATH = "";
 
 	/// OpenCV Canvases
 	static CanvasFrame canvas1; // Canvas for showing result image
@@ -27,6 +27,9 @@ public class Main {
 	static CanvasFrame canvas3;
 	static CanvasFrame canvas4;
 	static CanvasFrame canvas5; //Canvas for Sobel
+	static CanvasFrame canvas6; //Catcher Screen
+	static CanvasFrame canvas7;
+	static CanvasFrame canvas8;
 
 	/// FFmpeg variables
 	static FrameGrabber grabber;
@@ -42,11 +45,15 @@ public class Main {
 	IplImage imgResult;	// result image
 	IplImage imgBall; //Ball Image
 	IplImage imgSobel; //Sobel Image
+	IplImage imgCropped;
+	IplImage imgMorph;
+	IplImage imgMorphSobel;
 
 	/// Width and height of original frame
 	static CvSize _size;
 	static int width;
 	static int height;
+	static int cropsize=60;
 
 	/// Current frame number
 	static int framecount = 1;
@@ -67,6 +74,9 @@ public class Main {
 	List<Candidate> ballCandidates = new ArrayList<Candidate>();//Candidate Storage
 	Candidate detectedball;
 	
+	static Simple ballfinal = new Simple(new CvPoint(cropsize,cropsize));
+	static CvRect ballcrop;
+	
 	/*
 	 * Optimized color threshold examples
 	 *  1. (0,0,180,0),(255,64,255,0)
@@ -80,8 +90,6 @@ public class Main {
 				"'TAB'	: Fast forward (x20)\n" +
 				"'j'	: Jump to frame\n" +
 				"'p'	: Print current\n" +
-				"'1'	: Print as \"ssA.jpg\"\n" +
-				"'2'	: Print as \"ssB.jpg\"\n" +
 				"'r'	: Record(append) current\n" +
 				"'d'	: Process\n" +
 				"others	: Bypass processing");
@@ -94,13 +102,17 @@ public class Main {
 		canvas3 = new CanvasFrame("ball", CV_WINDOW_AUTOSIZE);
 		canvas4 = new CanvasFrame("Candidates", CV_WINDOW_AUTOSIZE);
 		canvas5 = new CanvasFrame("Sobel", CV_WINDOW_AUTOSIZE);
+		canvas6 = new CanvasFrame("Catcher",CV_WINDOW_AUTOSIZE);
+		canvas7 = new CanvasFrame("Morphology",CV_WINDOW_AUTOSIZE);
+		canvas8 = new CanvasFrame("MorphSobel", CV_WINDOW_AUTOSIZE);
+		
 
 		// Initialize FrameRecorder/FrameGrabber
-		grabber = new FFmpegFrameGrabber(PATH + "me.mp4");
-		grabber.start();
-		recorder = new FFmpegFrameRecorder(PATH + "trash.mp4", 640, 480);
+		recorder = new FFmpegFrameRecorder(PATH + "video/trash.mp4", 640, 480);
 		recorder.setFrameRate(30);
 		recorder.start();
+		grabber = new FFmpegFrameGrabber(PATH + "video/2.mp4");
+		grabber.start();
 
 		// Get frame size
 		_size = cvGetSize(grab());
@@ -115,7 +127,9 @@ public class Main {
 
 		m.imgCandidate = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		m.imgSobel = cvCreateImage(_size, IPL_DEPTH_8U,1);
-
+		m.imgMorphSobel = cvCreateImage(_size, IPL_DEPTH_8U,1);
+		m.imgCropped = cvCreateImage(_size, IPL_DEPTH_8U,1);
+		m.imgMorph = cvCreateImage(_size,IPL_DEPTH_8U,1);
 
 		while (true) {
 			m.imgTmpl = cvCreateImage(_size, IPL_DEPTH_8U, 3);
@@ -129,14 +143,28 @@ public class Main {
 
 			// Process image!
 			m.process();
+			
+			//Crop Image Around the Final Ball Point
+			ballcrop = new CvRect(Math.min(ballfinal.x()-cropsize,0), Math.min(ballfinal.y()-cropsize,0), Math.max(cropsize,width-ballfinal.x()), Math.max(cropsize,height-ballfinal.y()));
+			
+			cvSetImageROI(m.imgSobel, ballcrop);
+			m.imgCropped = cvCreateImage(cvGetSize(m.imgSobel),IPL_DEPTH_8U,1);
+			cvCopy(m.imgSobel,m.imgCropped);
+			cvResetImageROI(m.imgSobel);
+			m.imgCropped = CatcherDetect.main(m.imgCropped);
+			
 			cvCopy(m.imgTmpl, m.imgTmpl_prev);
 
 			canvas2.showImage(m.imgBW);
-			canvas3.showImage(m.imgBall);
-			canvas4.showImage(m.imgCandidate);
+			//canvas3.showImage(m.imgBall);
+			//canvas4.showImage(m.imgCandidate);
 			canvas5.showImage(m.imgSobel);
+			//canvas6.showImage(m.imgCropped);
+			canvas7.showImage(m.imgMorph);
+			canvas8.showImage(m.imgMorphSobel);
 
-			//cvSaveImage(PATH + "screenshot.jpg", m.imgBW);	
+			// Don't forget to do this!!!
+			m.cvReleaseAll();		
 
 			System.out.println("############## FRAME " + framecount + " ##############");
 
@@ -145,39 +173,26 @@ public class Main {
 			KeyEvent key = canvas1.waitKey(0);
 			if (key != null) {
 				if ( key.getKeyChar() == 27 ) {
-					m.cvReleaseAll();	
 					break;
 				} else if	(key.getKeyCode() == KeyEvent.VK_TAB) { // FFW 20 frames
-					m.cvReleaseAll();	
 					// pass 19 frame
 					for (int i=0; i<19; i++)
 						grab();
 					continue;
 				} else if (key.getKeyCode() == KeyEvent.VK_P ) { // Take screenshot
-					cvSaveImage(PATH + "screenshot.jpg", m.imgBW);
-					System.out.println("Saved screenshot!");
-				} else if (key.getKeyCode() == KeyEvent.VK_1 ) { // Take screenshot
-					cvSaveImage(PATH + "ssA.jpg", m.imgBW);
-					System.out.println("Saved as ssA.jpg");
-				} else if (key.getKeyCode() == KeyEvent.VK_2 ) { // Take screenshot
-					cvSaveImage(PATH + "ssB.jpg", m.imgBW);
-					System.out.println("Saved as ssB.jpg");
+					cvSaveImage(PATH + "screenshot.jpg", m.imgResult);
 				} else if (key.getKeyCode() == KeyEvent.VK_R) { // Record frames in an .avi file
 					recorder.record(m.imgResult);
 				} else if (key.getKeyCode() == KeyEvent.VK_F) { // FFW 2 frames
-					m.cvReleaseAll();	
 					grab();
 				} else if (key.getKeyCode() == KeyEvent.VK_C) {
 					flag_BW = 'c';
 				} else if (key.getKeyCode() == KeyEvent.VK_D) {
 					flag_BW = 'd';
 				} else if (key.getKeyCode() == KeyEvent.VK_J) {
-					m.cvReleaseAll();	
 					moveToFrame();
 				}
 			}
-			// Don't forget to do this!!!
-			m.cvReleaseAll();	
 		}
 
 		// Release resources, dispose grabber/canvas and exit
@@ -191,6 +206,9 @@ public class Main {
 		canvas3.dispose();
 		canvas4.dispose();	
 		canvas5.dispose();
+		canvas6.dispose();
+		canvas7.dispose();
+		canvas8.dispose();
 
 		System.out.println("(TERMINATED)");
 	}
@@ -281,19 +299,11 @@ public class Main {
 		List<Info> blobs;
 		IplImage imgRecovery;
 		
-		//cvSobel(imgBW,imgSobel,2,0,3);
-		//cvLaplace(imgBW,imgSobel,3);
-		cvCanny(imgBW,imgSobel,180,230,3);	// Upper edge: Threshold for gradient (primary)
-											// Lower edge: Buffer for connectivity
+		cvMorphologyEx(imgBW, imgMorph, null, null, CV_MOP_OPEN, 1);
 		
-		IplImage eigImage = cvCreateImage(_size, IPL_DEPTH_32F, 1);
-		CvPoint2D32f c = new CvPoint2D32f(100);
-		c.zero();
-		IplImage tempImage = cvCreateImage(_size, IPL_DEPTH_32F, 1);
-		int[] cornerCount = new int[10];
-		//cvGoodFeaturesToTrack(imgBW, eigImage, tempImage, c, cornerCount, 0.90, 10, null, 3, 0, 0.04);
-		//System.out.println("Good corners: " + cornerCount[0]);
-		//System.out.println(doubleArrayToString(c.get()));
+		//cvSmooth(imgBW, imgBW, CV_GAUSSIAN, 7);
+		cvCanny(imgBW,imgSobel,80,200,3);
+		cvCanny(imgMorph,imgMorphSobel,80,200,3);
 
 		switch (flag_BW) {
 		case 'c' :
@@ -303,6 +313,7 @@ public class Main {
 			binary = scd.detectChange();
 		break;
 		case 'd' :
+			cvSaveImage("sample.jpg",imgSobel);
 			/// DETECTING VALUE CHANGE
 			scd = new SatChangeDetect();
 			scd.initialize(imgTmpl_prev, imgTmpl);
@@ -343,6 +354,7 @@ public class Main {
 			// get each Candidate, add a new center at the end of it,
 			// and then put it onto the top of the ballCandidates
 			
+			
 			for (int q = ballCandidates.size()-1; q>=0; q--) {
 				Candidate cc = new Candidate(ballCandidates.get(q));
 				
@@ -375,6 +387,7 @@ public class Main {
 								drawBall();
 								System.out.println("BALL WAS CAUGHT /nf");
 								System.out.println("The Speed of Pitch is " + 1503/detectedball.centers.size() + "km/h");
+								ballfinal=detectedball.centers.get(detectedball.centers.size()-1);
 								balldetermined=false;
 							}
 						}
@@ -383,7 +396,8 @@ public class Main {
 						
 						// SUCCESS!!
 						ballCandidates.add(new Candidate(cc)); // auto-updated
-						ballCandidates.get(ballCandidates.size()-1).addMissed();					
+						ballCandidates.get(ballCandidates.size()-1).addMissed();
+								
 						
 						/*
 						// Also SUCCESS!
@@ -669,6 +683,7 @@ public class Main {
 					drawBall();
 					System.out.println("BALL WAS CAUGHT /j");
 					System.out.println("The Speed of Pitch is " + 1080/detectedball.centers.size() + "km/h");
+					ballfinal=detectedball.centers.get(detectedball.centers.size()-1);
 					ballCandidates.remove(0);
 					balldetermined=false;
 				}
@@ -689,13 +704,5 @@ public class Main {
 		//cvReleaseImage(imgTmpl_prev);
 		cvReleaseImage(imgCandidate);
 		cvReleaseImage(imgSobel);
-	}
-	
-	public String doubleArrayToString(double[] ds) {
-		String result = "";
-		for(int i=0; i<ds.length; i++) {
-			result += ds[i] + " ";
-		}
-		return result;
 	}
 }

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="D:/projects/Java Libraries/javacv-0.6-bin/javacv-bin/javacpp.jar"/>
 	<classpathentry kind="lib" path="D:/projects/Java Libraries/javacv-0.6-bin/javacv-bin/javacv.jar"/>
 	<classpathentry kind="lib" path="D:/projects/Java Libraries/javacv-0.6-bin/javacv-bin/javacv-android-arm.jar"/>
@@ -9,6 +10,5 @@
 	<classpathentry kind="lib" path="D:/projects/Java Libraries/javacv-0.6-bin/javacv-bin/javacv-macosx-x86_64.jar"/>
 	<classpathentry kind="lib" path="D:/projects/Java Libraries/javacv-0.6-bin/javacv-bin/javacv-windows-x86.jar"/>
 	<classpathentry kind="lib" path="D:/projects/Java Libraries/javacv-0.6-bin/javacv-bin/javacv-windows-x86_64.jar"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
