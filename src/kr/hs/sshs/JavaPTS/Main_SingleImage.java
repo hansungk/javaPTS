@@ -182,8 +182,10 @@ public class Main_SingleImage {
 			if (d < mintheta) mintheta = d;
 			if (d > maxtheta) maxtheta = d;
 		}
+		System.out.println("Maxtheta: " + maxtheta);
+		System.out.println("Mintheta: " + mintheta);
 		//double thetaInterval = (Math.PI / 180 ) * 5.0;		// 'Hard' interval (based on absolute theta)
-		double thetaInterval = (maxtheta - mintheta) / 20.0;		// 'Soft' interval (based on interval counts)
+		double thetaInterval = (maxtheta - mintheta) / 2000;		// 'Soft' interval (based on interval counts)
 		int roomsCount = (int)Math.floor((maxtheta-mintheta) / thetaInterval) + 1;
 		List<ArrayList<Double>> rooms = new ArrayList<ArrayList<Double>>();
 		for(int i=0; i<roomsCount; i++) rooms.add(new ArrayList<Double>());	// initialize
@@ -191,22 +193,30 @@ public class Main_SingleImage {
 			int whatroom = (int)Math.floor((d - mintheta) / thetaInterval);	// from 0
 			rooms.get(whatroom).add(d);
 		}
-		int popularRoom1=0, popularRoomCount1=0;
-		int popularRoom2=0, popularRoomCount2=0;
+		int probableRoom1=0, probableRoomCount1=0;
+		int probableRoom2=0, probableRoomCount2=0;
 		for (int i=0; i<roomsCount; i++) {
 			int thisRoomCount = rooms.get(i).size();
-			if (thisRoomCount > popularRoomCount1) {
-				popularRoomCount1 = thisRoomCount;
-				popularRoom1 = i;
+			if (thisRoomCount > probableRoomCount1) {
+				probableRoomCount1 = thisRoomCount;
+				probableRoom1 = i;
 			}
-			if (popularRoomCount2 < thisRoomCount && thisRoomCount < popularRoomCount1) {
-				popularRoomCount2 = thisRoomCount;
-				popularRoom2 = i;
+			if (probableRoomCount2 < thisRoomCount && thisRoomCount < probableRoomCount1) {
+				probableRoomCount2 = thisRoomCount;
+				probableRoom2 = i;
 			}
 		}
-		System.out.println("1st popular room: " + popularRoomCount1);
-		System.out.println("2nd popular room: " + popularRoomCount2);
-		for(double d : rooms.get(popularRoom1)) System.out.print(d/Math.PI*180 + " ");
+		System.out.println("1st probable theta count: " + probableRoomCount1);
+		System.out.println("2nd probable theta count: " + probableRoomCount2);
+		//for(double d : rooms.get(probableRoom1)) System.out.print(d/Math.PI*180 + " ");
+		//for(double d : drooms.get(probableDRoom1)) System.out.print(d);
+		double sum1 = 0, sum2 = 0;
+		for (double d : rooms.get(probableRoom1)) {sum1 += d;}
+		for (double d : rooms.get(probableRoom2)) {sum2 += d;}
+		double probableTheta1 = sum1 / probableRoomCount1;
+		double probableTheta2 = sum2 / probableRoomCount2;
+		System.out.println("1st probable theta AVG: " + probableTheta1 / Math.PI * 180);
+		System.out.println("2nd probable theta AVG: " + probableTheta2 / Math.PI * 180);
 		System.out.println();
 		
 		/// Distance
@@ -231,7 +241,7 @@ public class Main_SingleImage {
 		System.out.println("Maxdistance: " + maxdistance);
 		System.out.println("Mindistance: " + mindistance);
 		//double thetaInterval = (Math.PI / 180 ) * 5.0;		// 'Hard' interval (based on absolute theta)
-		double distanceInterval = (maxdistance - mindistance) / 20.0;		// 'Soft' interval (based on interval counts)
+		double distanceInterval = (maxdistance - mindistance) / 2000.0;		// 'Soft' interval (based on interval counts)
 		int droomsCount = (int)Math.floor((maxdistance-mindistance) / distanceInterval) + 1;
 		List<ArrayList<Double>> drooms = new ArrayList<ArrayList<Double>>();
 		for(int i=0; i<droomsCount; i++) drooms.add(new ArrayList<Double>());	// initialize
@@ -239,23 +249,34 @@ public class Main_SingleImage {
 			int whatroom = (int)Math.floor((d - mindistance) / distanceInterval);	// from 0
 			drooms.get(whatroom).add(d);
 		}
-		int popularDRoom1=0, popularDRoomCount1=0;
-		int popularDRoom2=0, popularDRoomCount2=0;
+		int probableDRoom1=0, probableDRoomCount1=0;
+		int probableDRoom2=0, probableDRoomCount2=0;
 		for (int i=0; i<droomsCount; i++) {
 			int thisDRoomCount = drooms.get(i).size();
-			if (thisDRoomCount > popularDRoomCount1) {
-				popularDRoomCount1 = thisDRoomCount;
-				popularDRoom1 = i;
+			if (thisDRoomCount > probableDRoomCount1) {
+				probableDRoomCount1 = thisDRoomCount;
+				probableDRoom1 = i;
 			}
-			if (popularDRoomCount2 < thisDRoomCount && thisDRoomCount < popularDRoomCount1) {
-				popularDRoomCount2 = thisDRoomCount;
-				popularDRoom2 = i;
+			if (probableDRoomCount2 < thisDRoomCount && thisDRoomCount < probableDRoomCount1) {
+				probableDRoomCount2 = thisDRoomCount;
+				probableDRoom2 = i;
 			}
 		}
-		System.out.println("1st popular DRoom: " + popularDRoomCount1);
-		System.out.println("2nd popular DRoom: " + popularDRoomCount2);
-		for(double d : drooms.get(popularDRoom1)) System.out.print(d/Math.PI*180 + " ");
+		System.out.println("1st probable distance count: " + probableDRoomCount1);
+		System.out.println("2nd probable distance count: " + probableDRoomCount2);
+		//for(double d : drooms.get(probableDRoom1)) System.out.print(d);
+		sum1 = 0; sum2 = 0;
+		for (double d : drooms.get(probableDRoom1)) {sum1 += d;}
+		for (double d : drooms.get(probableDRoom2)) {sum2 += d;}
+		double probableDistance1 = sum1 / probableDRoomCount1;
+		double probableDistance2 = sum2 / probableDRoomCount2;
+		System.out.println("1st probable distance AVG: " + probableDistance1);
+		System.out.println("2nd probable distance AVG: " + probableDistance2);
 		System.out.println();
+		writer = new PrintWriter(PATH+"result.txt", "cp949");
+		writer.println("Distance: " + probableDistance1);
+		writer.println("Theta   : " + probableTheta1);
+		writer.close();
 	}
 	
 	public String doubleArrayToString(double[] ds) {
