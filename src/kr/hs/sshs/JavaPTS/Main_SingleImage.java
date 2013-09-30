@@ -38,7 +38,6 @@ public class Main_SingleImage {
 	IplImage imgEig;
 	IplImage imgTemp;
 	
-	
 	public static void main(String[] args) throws InterruptedException, FileNotFoundException, UnsupportedEncodingException {
 		Main_SingleImage m = new Main_SingleImage();
 		CvSize _size = new CvSize(200, 300);
@@ -165,21 +164,98 @@ public class Main_SingleImage {
 	public static void findBgMovement(double[][] flows) throws FileNotFoundException, UnsupportedEncodingException {
 		int flowsCount = flows.length;
 		System.out.println("Successful: " + flowsCount);
+		
+		/// Theta
+		
 		PrintWriter writer = new PrintWriter(PATH+"theta.txt", "cp949");
-		double sum=0;
+		ArrayList<Double> thetas = new ArrayList<Double>();
 		for(int i=0; i<flowsCount; i++) {
 			double theta = Math.atan2(flows[i][1], flows[i][0]);
-			writer.println(theta / Math.PI * 180.0);
-			sum += theta;	// Remember that Y-axis is flipped!!!
+			thetas.add(theta);
+			writer.println(theta / Math.PI * 180.0);	// Remember that Y-axis is flipped!!!
 		}
 		writer.close();
+		// Find min and max
+		double mintheta = 2*Math.PI;
+		double maxtheta = 0;
+		for (double d : thetas) {
+			if (d < mintheta) mintheta = d;
+			if (d > maxtheta) maxtheta = d;
+		}
+		//double thetaInterval = (Math.PI / 180 ) * 5.0;		// 'Hard' interval (based on absolute theta)
+		double thetaInterval = (maxtheta - mintheta) / 20.0;		// 'Soft' interval (based on interval counts)
+		int roomsCount = (int)Math.floor((maxtheta-mintheta) / thetaInterval) + 1;
+		List<ArrayList<Double>> rooms = new ArrayList<ArrayList<Double>>();
+		for(int i=0; i<roomsCount; i++) rooms.add(new ArrayList<Double>());	// initialize
+		for (double d : thetas) {
+			int whatroom = (int)Math.floor((d - mintheta) / thetaInterval);	// from 0
+			rooms.get(whatroom).add(d);
+		}
+		int popularRoom1=0, popularRoomCount1=0;
+		int popularRoom2=0, popularRoomCount2=0;
+		for (int i=0; i<roomsCount; i++) {
+			int thisRoomCount = rooms.get(i).size();
+			if (thisRoomCount > popularRoomCount1) {
+				popularRoomCount1 = thisRoomCount;
+				popularRoom1 = i;
+			}
+			if (popularRoomCount2 < thisRoomCount && thisRoomCount < popularRoomCount1) {
+				popularRoomCount2 = thisRoomCount;
+				popularRoom2 = i;
+			}
+		}
+		System.out.println("1st popular room: " + popularRoomCount1);
+		System.out.println("2nd popular room: " + popularRoomCount2);
+		for(double d : rooms.get(popularRoom1)) System.out.print(d/Math.PI*180 + " ");
+		System.out.println();
+		
+		/// Distance
+		
 		writer = new PrintWriter(PATH+"distance.txt","cp949");
-				
+		ArrayList<Double> distances = new ArrayList<Double>();
 		for(int i=0; i<flowsCount; i++) {
 			double euclidlength = Math.sqrt(flows[i][0]*flows[i][0] + flows[i][1]*flows[i][1]);
+			distances.add(euclidlength);
 			writer.println(euclidlength);
 		}
 		writer.close();
+		// Find min and max
+		double mindistance = 2 * Math.PI;
+		double maxdistance = 0;
+		for (double d : distances) {
+			if (d < mindistance)
+				mindistance = d;
+			if (d > maxdistance)
+				maxdistance = d;
+		}
+		System.out.println("Maxdistance: " + maxdistance);
+		System.out.println("Mindistance: " + mindistance);
+		//double thetaInterval = (Math.PI / 180 ) * 5.0;		// 'Hard' interval (based on absolute theta)
+		double distanceInterval = (maxdistance - mindistance) / 20.0;		// 'Soft' interval (based on interval counts)
+		int droomsCount = (int)Math.floor((maxdistance-mindistance) / distanceInterval) + 1;
+		List<ArrayList<Double>> drooms = new ArrayList<ArrayList<Double>>();
+		for(int i=0; i<droomsCount; i++) drooms.add(new ArrayList<Double>());	// initialize
+		for (double d : distances) {
+			int whatroom = (int)Math.floor((d - mindistance) / distanceInterval);	// from 0
+			drooms.get(whatroom).add(d);
+		}
+		int popularDRoom1=0, popularDRoomCount1=0;
+		int popularDRoom2=0, popularDRoomCount2=0;
+		for (int i=0; i<droomsCount; i++) {
+			int thisDRoomCount = drooms.get(i).size();
+			if (thisDRoomCount > popularDRoomCount1) {
+				popularDRoomCount1 = thisDRoomCount;
+				popularDRoom1 = i;
+			}
+			if (popularDRoomCount2 < thisDRoomCount && thisDRoomCount < popularDRoomCount1) {
+				popularDRoomCount2 = thisDRoomCount;
+				popularDRoom2 = i;
+			}
+		}
+		System.out.println("1st popular DRoom: " + popularDRoomCount1);
+		System.out.println("2nd popular DRoom: " + popularDRoomCount2);
+		for(double d : drooms.get(popularDRoom1)) System.out.print(d/Math.PI*180 + " ");
+		System.out.println();
 	}
 	
 	public String doubleArrayToString(double[] ds) {
