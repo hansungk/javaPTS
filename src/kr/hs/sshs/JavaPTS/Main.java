@@ -207,7 +207,7 @@ public class Main {
 		canvas4.dispose();	
 		canvas5.dispose();
 		canvas6.dispose();
-		canvas7.dispose();
+		canvas7.dispose(); 
 		canvas8.dispose();
 
 		System.out.println("(TERMINATED)");
