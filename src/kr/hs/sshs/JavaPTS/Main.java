@@ -96,7 +96,7 @@ public class Main {
 		canvas5 = new CanvasFrame("Sobel", CV_WINDOW_AUTOSIZE);
 
 		// Initialize FrameRecorder/FrameGrabber
-		grabber = new FFmpegFrameGrabber(PATH + "withorwithout.mp4");
+		grabber = new FFmpegFrameGrabber(PATH + "me.mp4");
 		grabber.start();
 		recorder = new FFmpegFrameRecorder(PATH + "trash.mp4", 640, 480);
 		recorder.setFrameRate(30);

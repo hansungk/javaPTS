@@ -1,10 +1,5 @@
 package kr.hs.sshs.JavaPTS;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import com.googlecode.javacv.cpp.opencv_core.CvPoint;
-
 class Info{
 
 	int xmin, ymin, xmax, ymax, count;
