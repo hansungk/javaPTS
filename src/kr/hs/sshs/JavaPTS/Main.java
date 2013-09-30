@@ -19,7 +19,7 @@ import com.googlecode.javacv.cpp.opencv_core.IplImage;
 
 public class Main {
 	/// Path to store resources
-	private static String PATH = "";
+	private static String PATH = "video/";
 
 	/// OpenCV Canvases
 	static CanvasFrame canvas1; // Canvas for showing result image
@@ -80,6 +80,8 @@ public class Main {
 				"'TAB'	: Fast forward (x20)\n" +
 				"'j'	: Jump to frame\n" +
 				"'p'	: Print current\n" +
+				"'1'	: Print as \"ssA.jpg\"\n" +
+				"'2'	: Print as \"ssB.jpg\"\n" +
 				"'r'	: Record(append) current\n" +
 				"'d'	: Process\n" +
 				"others	: Bypass processing");
@@ -94,9 +96,9 @@ public class Main {
 		canvas5 = new CanvasFrame("Sobel", CV_WINDOW_AUTOSIZE);
 
 		// Initialize FrameRecorder/FrameGrabber
-		grabber = new FFmpegFrameGrabber(PATH + "video/2.mp4");
+		grabber = new FFmpegFrameGrabber(PATH + "withorwithout.mp4");
 		grabber.start();
-		recorder = new FFmpegFrameRecorder(PATH + "video/trash.mp4", 640, 480);
+		recorder = new FFmpegFrameRecorder(PATH + "trash.mp4", 640, 480);
 		recorder.setFrameRate(30);
 		recorder.start();
 
@@ -134,8 +136,7 @@ public class Main {
 			canvas4.showImage(m.imgCandidate);
 			canvas5.showImage(m.imgSobel);
 
-			// Don't forget to do this!!!
-			m.cvReleaseAll();		
+			//cvSaveImage(PATH + "screenshot.jpg", m.imgBW);	
 
 			System.out.println("############## FRAME " + framecount + " ##############");
 
@@ -144,26 +145,39 @@ public class Main {
 			KeyEvent key = canvas1.waitKey(0);
 			if (key != null) {
 				if ( key.getKeyChar() == 27 ) {
+					m.cvReleaseAll();	
 					break;
 				} else if	(key.getKeyCode() == KeyEvent.VK_TAB) { // FFW 20 frames
+					m.cvReleaseAll();	
 					// pass 19 frame
 					for (int i=0; i<19; i++)
 						grab();
 					continue;
 				} else if (key.getKeyCode() == KeyEvent.VK_P ) { // Take screenshot
-					cvSaveImage(PATH + "screenshot.jpg", m.imgResult);
+					cvSaveImage(PATH + "screenshot.jpg", m.imgBW);
+					System.out.println("Saved screenshot!");
+				} else if (key.getKeyCode() == KeyEvent.VK_1 ) { // Take screenshot
+					cvSaveImage(PATH + "ssA.jpg", m.imgBW);
+					System.out.println("Saved as ssA.jpg");
+				} else if (key.getKeyCode() == KeyEvent.VK_2 ) { // Take screenshot
+					cvSaveImage(PATH + "ssB.jpg", m.imgBW);
+					System.out.println("Saved as ssB.jpg");
 				} else if (key.getKeyCode() == KeyEvent.VK_R) { // Record frames in an .avi file
 					recorder.record(m.imgResult);
 				} else if (key.getKeyCode() == KeyEvent.VK_F) { // FFW 2 frames
+					m.cvReleaseAll();	
 					grab();
 				} else if (key.getKeyCode() == KeyEvent.VK_C) {
 					flag_BW = 'c';
 				} else if (key.getKeyCode() == KeyEvent.VK_D) {
 					flag_BW = 'd';
 				} else if (key.getKeyCode() == KeyEvent.VK_J) {
+					m.cvReleaseAll();	
 					moveToFrame();
 				}
 			}
+			// Don't forget to do this!!!
+			m.cvReleaseAll();	
 		}
 
 		// Release resources, dispose grabber/canvas and exit
@@ -268,7 +282,18 @@ public class Main {
 		IplImage imgRecovery;
 		
 		//cvSobel(imgBW,imgSobel,2,0,3);
-		cvLaplace(imgBW,imgSobel,3);
+		//cvLaplace(imgBW,imgSobel,3);
+		cvCanny(imgBW,imgSobel,180,230,3);	// Upper edge: Threshold for gradient (primary)
+											// Lower edge: Buffer for connectivity
+		
+		IplImage eigImage = cvCreateImage(_size, IPL_DEPTH_32F, 1);
+		CvPoint2D32f c = new CvPoint2D32f(100);
+		c.zero();
+		IplImage tempImage = cvCreateImage(_size, IPL_DEPTH_32F, 1);
+		int[] cornerCount = new int[10];
+		//cvGoodFeaturesToTrack(imgBW, eigImage, tempImage, c, cornerCount, 0.90, 10, null, 3, 0, 0.04);
+		//System.out.println("Good corners: " + cornerCount[0]);
+		//System.out.println(doubleArrayToString(c.get()));
 
 		switch (flag_BW) {
 		case 'c' :
@@ -318,7 +343,6 @@ public class Main {
 			// get each Candidate, add a new center at the end of it,
 			// and then put it onto the top of the ballCandidates
 			
-			
 			for (int q = ballCandidates.size()-1; q>=0; q--) {
 				Candidate cc = new Candidate(ballCandidates.get(q));
 				
@@ -359,8 +383,7 @@ public class Main {
 						
 						// SUCCESS!!
 						ballCandidates.add(new Candidate(cc)); // auto-updated
-						ballCandidates.get(ballCandidates.size()-1).addMissed();
-								
+						ballCandidates.get(ballCandidates.size()-1).addMissed();					
 						
 						/*
 						// Also SUCCESS!
@@ -666,5 +689,13 @@ public class Main {
 		//cvReleaseImage(imgTmpl_prev);
 		cvReleaseImage(imgCandidate);
 		cvReleaseImage(imgSobel);
+	}
+	
+	public String doubleArrayToString(double[] ds) {
+		String result = "";
+		for(int i=0; i<ds.length; i++) {
+			result += ds[i] + " ";
+		}
+		return result;
 	}
 }

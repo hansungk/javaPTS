@@ -6,3 +6,6 @@
 *.war
 *.ear
 /video
+
+# Log Files #
+*.log
