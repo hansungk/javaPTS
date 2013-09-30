@@ -685,7 +685,7 @@ public class Main {
 					System.out.println("The Speed of Pitch is " + 1080/detectedball.centers.size() + "km/h");
 					ballfinal=detectedball.centers.get(detectedball.centers.size()-1);
 					ballCandidates.remove(0);
-					balldetermined=false;
+					balldetermined=false; 
 				}
 				else ballCandidates.remove(i);
 			}
