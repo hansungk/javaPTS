@@ -703,6 +703,7 @@ public class Main {
 		cvReleaseImage(imgTmpl);
 		//cvReleaseImage(imgTmpl_prev);
 		cvReleaseImage(imgCandidate);
+		
 		cvReleaseImage(imgSobel);
 	}
 }
