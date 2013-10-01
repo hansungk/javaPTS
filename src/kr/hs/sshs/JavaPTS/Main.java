@@ -79,7 +79,7 @@ public class Main {
 	
 	/*
 	 * Optimized color threshold examples
-	 *  1. (0,0,180,0),(255,64,255,0)
+	 *  1. (0,0,180,0),(255,64,255,0) 
 	 */
 
 	public static void main(String[] args) throws InterruptedException, Exception, com.googlecode.javacv.FrameRecorder.Exception {
