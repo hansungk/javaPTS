@@ -28,8 +28,8 @@ public class Main {
 	static CanvasFrame canvas4;
 	static CanvasFrame canvas5; //Canvas for Sobel
 	static CanvasFrame canvas6; //Catcher Screen
-	static CanvasFrame canvas7;
-	static CanvasFrame canvas8;
+	//static CanvasFrame canvas7;
+	//static CanvasFrame canvas8;
 
 	/// FFmpeg variables
 	static FrameGrabber grabber;
@@ -46,8 +46,8 @@ public class Main {
 	IplImage imgBall; //Ball Image
 	IplImage imgSobel; //Sobel Image
 	IplImage imgCropped;
-	IplImage imgMorph;
-	IplImage imgMorphSobel;
+	//IplImage imgMorph;
+	//IplImage imgMorphSobel;
 
 	/// Width and height of original frame
 	static CvSize _size;
@@ -105,15 +105,15 @@ public class Main {
 		canvas4 = new CanvasFrame("Candidates", CV_WINDOW_AUTOSIZE);
 		canvas5 = new CanvasFrame("Sobel", CV_WINDOW_AUTOSIZE);
 		canvas6 = new CanvasFrame("Catcher",CV_WINDOW_AUTOSIZE);
-		canvas7 = new CanvasFrame("Morphology",CV_WINDOW_AUTOSIZE);
-		canvas8 = new CanvasFrame("MorphSobel", CV_WINDOW_AUTOSIZE);
+		//canvas7 = new CanvasFrame("Morphology",CV_WINDOW_AUTOSIZE);
+		//canvas8 = new CanvasFrame("MorphSobel", CV_WINDOW_AUTOSIZE);
 		
 
 		// Initialize FrameRecorder/FrameGrabber
 		recorder = new FFmpegFrameRecorder(PATH + "video/trash.mp4", 640, 480);
 		recorder.setFrameRate(30);
 		recorder.start();
-		grabber = new FFmpegFrameGrabber(PATH + "video/2.mp4");
+		grabber = new FFmpegFrameGrabber(PATH + "video/corner.mp4");
 		grabber.start();
 
 		// Get frame size
@@ -129,9 +129,9 @@ public class Main {
 
 		m.imgCandidate = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		m.imgSobel = cvCreateImage(_size, IPL_DEPTH_8U,1);
-		m.imgMorphSobel = cvCreateImage(_size, IPL_DEPTH_8U,1);
-		m.imgCropped = cvCreateImage(_size, IPL_DEPTH_8U,1);
-		m.imgMorph = cvCreateImage(_size,IPL_DEPTH_8U,1);
+		//m.imgMorphSobel = cvCreateImage(_size, IPL_DEPTH_8U,1);
+		//m.imgCropped = cvCreateImage(_size, IPL_DEPTH_8U,1);
+		//m.imgMorph = cvCreateImage(_size,IPL_DEPTH_8U,1);
 
 		while (true) {
 			m.imgTmpl = cvCreateImage(_size, IPL_DEPTH_8U, 3);
@@ -147,23 +147,23 @@ public class Main {
 			m.process();
 			
 			//Crop Image Around the Final Ball Point
-			ballcrop = new CvRect(Math.min(ballfinal.x()-cropsize,0), Math.min(ballfinal.y()-cropsize,0), Math.max(cropsize,width-ballfinal.x()), Math.max(cropsize,height-ballfinal.y()));
+			ballcrop = new CvRect(Math.max(ballfinal.x()-cropsize,0), Math.max(ballfinal.y()-cropsize,0), Math.min(2*cropsize,2*(width-ballfinal.x())), Math.min(2*cropsize,2*(height-ballfinal.y())));
 			
 			cvSetImageROI(m.imgSobel, ballcrop);
 			m.imgCropped = cvCreateImage(cvGetSize(m.imgSobel),IPL_DEPTH_8U,1);
 			cvCopy(m.imgSobel,m.imgCropped);
 			cvResetImageROI(m.imgSobel);
-			m.imgCropped = CatcherDetect.main(m.imgCropped);
+			CatcherDetect.main(m.imgCropped);
 			
 			cvCopy(m.imgTmpl, m.imgTmpl_prev);
 
 			canvas2.showImage(m.imgBW);
-			//canvas3.showImage(m.imgBall);
-			//canvas4.showImage(m.imgCandidate);
+			canvas3.showImage(m.imgBall);
+			canvas4.showImage(m.imgCandidate);
 			canvas5.showImage(m.imgSobel);
-			//canvas6.showImage(m.imgCropped);
-			canvas7.showImage(m.imgMorph);
-			canvas8.showImage(m.imgMorphSobel);		
+			canvas6.showImage(m.imgCropped);
+			//canvas7.showImage(m.imgMorph);
+			//canvas8.showImage(m.imgMorphSobel);		
 
 			System.out.println("############## FRAME " + framecount + " ##############");
 
@@ -219,8 +219,8 @@ public class Main {
 		canvas4.dispose();	
 		canvas5.dispose();
 		canvas6.dispose();
-		canvas7.dispose();
-		canvas8.dispose();
+		//canvas7.dispose();
+		//canvas8.dispose();
 
 		System.out.println("(TERMINATED)");
 	}
@@ -311,11 +311,11 @@ public class Main {
 		List<Info> blobs;
 		IplImage imgRecovery;
 		
-		cvMorphologyEx(imgBW, imgMorph, null, null, CV_MOP_OPEN, 1);
+		//cvMorphologyEx(imgBW, imgMorph, null, null, CV_MOP_OPEN, 1);
 		
 		//cvSmooth(imgBW, imgBW, CV_GAUSSIAN, 7);
 		cvCanny(imgBW,imgSobel,80,200,3);
-		cvCanny(imgMorph,imgMorphSobel,80,200,3);
+		//cvCanny(imgMorph,imgMorphSobel,80,200,3);
 
 		switch (flag_BW) {
 		case 'c' :
@@ -716,6 +716,7 @@ public class Main {
 		//cvReleaseImage(imgTmpl_prev);
 		cvReleaseImage(imgCandidate);
 		cvReleaseImage(imgSobel);
+		cvReleaseImage(imgCropped);
 	}
 	
 	public String doubleArrayToString(double[] ds) {
