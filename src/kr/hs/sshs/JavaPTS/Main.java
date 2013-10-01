@@ -79,7 +79,7 @@ public class Main {
 	
 	/*
 	 * Optimized color threshold examples
-	 *  1. (0,0,180,0),(255,64,255,0) 
+	 *  1. (0,0,180,0),(255,64,255,0)
 	 */
 
 	public static void main(String[] args) throws InterruptedException, Exception, com.googlecode.javacv.FrameRecorder.Exception {
@@ -90,6 +90,8 @@ public class Main {
 				"'TAB'	: Fast forward (x20)\n" +
 				"'j'	: Jump to frame\n" +
 				"'p'	: Print current\n" +
+				"'1'	: Print as \"ssA.jpg\"\n" +
+				"'2'	: Print as \"ssB.jpg\"\n" +
 				"'r'	: Record(append) current\n" +
 				"'d'	: Process\n" +
 				"others	: Bypass processing");
@@ -161,10 +163,7 @@ public class Main {
 			canvas5.showImage(m.imgSobel);
 			//canvas6.showImage(m.imgCropped);
 			canvas7.showImage(m.imgMorph);
-			canvas8.showImage(m.imgMorphSobel);
-
-			// Don't forget to do this!!!
-			m.cvReleaseAll();		
+			canvas8.showImage(m.imgMorphSobel);		
 
 			System.out.println("############## FRAME " + framecount + " ##############");
 
@@ -173,26 +172,39 @@ public class Main {
 			KeyEvent key = canvas1.waitKey(0);
 			if (key != null) {
 				if ( key.getKeyChar() == 27 ) {
+					m.cvReleaseAll();	
 					break;
 				} else if	(key.getKeyCode() == KeyEvent.VK_TAB) { // FFW 20 frames
+					m.cvReleaseAll();	
 					// pass 19 frame
 					for (int i=0; i<19; i++)
 						grab();
 					continue;
 				} else if (key.getKeyCode() == KeyEvent.VK_P ) { // Take screenshot
-					cvSaveImage(PATH + "screenshot.jpg", m.imgResult);
+					cvSaveImage(PATH + "screenshot.jpg", m.imgBW);
+					System.out.println("Saved screenshot!");
+				} else if (key.getKeyCode() == KeyEvent.VK_1 ) { // Take screenshot
+					cvSaveImage(PATH + "ssA.jpg", m.imgBW);
+					System.out.println("Saved as ssA.jpg");
+				} else if (key.getKeyCode() == KeyEvent.VK_2 ) { // Take screenshot
+					cvSaveImage(PATH + "ssB.jpg", m.imgBW);
+					System.out.println("Saved as ssB.jpg");
 				} else if (key.getKeyCode() == KeyEvent.VK_R) { // Record frames in an .avi file
 					recorder.record(m.imgResult);
 				} else if (key.getKeyCode() == KeyEvent.VK_F) { // FFW 2 frames
+					m.cvReleaseAll();	
 					grab();
 				} else if (key.getKeyCode() == KeyEvent.VK_C) {
 					flag_BW = 'c';
 				} else if (key.getKeyCode() == KeyEvent.VK_D) {
 					flag_BW = 'd';
 				} else if (key.getKeyCode() == KeyEvent.VK_J) {
+					m.cvReleaseAll();	
 					moveToFrame();
 				}
 			}
+			// Don't forget to do this!!!
+			m.cvReleaseAll();	
 		}
 
 		// Release resources, dispose grabber/canvas and exit
@@ -704,5 +716,13 @@ public class Main {
 		//cvReleaseImage(imgTmpl_prev);
 		cvReleaseImage(imgCandidate);
 		cvReleaseImage(imgSobel);
+	}
+	
+	public String doubleArrayToString(double[] ds) {
+		String result = "";
+		for(int i=0; i<ds.length; i++) {
+			result += ds[i] + " ";
+		}
+		return result;
 	}
 }
