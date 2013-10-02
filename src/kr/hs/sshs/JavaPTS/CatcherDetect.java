@@ -58,9 +58,8 @@ public class CatcherDetect {
 			//initiate condition
 			if(bin[pX+rW/2][pY]==0||(pY>0 && bin[pX+rW/2][pY-1]==1)) { continue;}
 			else {lEnd[0]=rW/2; rEnd[0]=rW/2;}
-			
-			System.out.println();
-			System.out.println("pivot : ("+pX+","+pY+")" );
+
+			//System.out.println("pivot : ("+pX+","+pY+")" );
 			
 			//movingg ROI data
 			for(int i = pX; i < pX+rW; i++){
@@ -88,7 +87,7 @@ public class CatcherDetect {
 			
 			//don't regard as head if too long
 			if(lEnd[0] < rW/2-5 || rEnd[0]>rW/2+5){
-				System.out.println("toolong");
+				//System.out.println("toolong");
 				continue;
 			}
 			
@@ -113,7 +112,7 @@ public class CatcherDetect {
 				//too much missing upper line -> notCatcher
 				if(m<=k-4){
 					notCatcher=true;
-					System.out.println("cut");
+					//System.out.println("cut");
 					break;
 				}
 				
@@ -138,7 +137,7 @@ public class CatcherDetect {
 				//too much missing upper line -> notCatcher
 				if(m<=k-4){
 					notCatcher=true;
-					System.out.println("cut");
+					//System.out.println("cut");
 					break;
 				}
 				
@@ -155,7 +154,10 @@ public class CatcherDetect {
 			}
 			
 			//if too short in vertical
-			if(notCatcher && k<2*rH/3) {System.out.println("not long enough"); continue;}
+			if(notCatcher && k<2*rH/3) {
+				//System.out.println("not long enough");
+				continue;
+			}
 			hMax = k;
 			
 			k=rH/2;
@@ -165,12 +167,12 @@ public class CatcherDetect {
 			
 			//not good shape
 			if(lEnd[0]<lEnd[k]+3 || rEnd[0]>rEnd[n]-3) {
-				System.out.println("shape not catcher");
+				//System.out.println("shape not catcher");
 				continue;
 			}
 			
 			if(rEnd[n]-lEnd[k]<10) {
-				System.out.println("shape not catcher");
+				//System.out.println("shape not catcher");
 				continue;
 			}
 			
