@@ -237,7 +237,7 @@ public class Main_OpticalFlow {
 			if (distance < mindistance) mindistance = distance;
 			if (distance > maxdistance) maxdistance = distance;
 		}
-		int roomsCount = 100;
+		int roomsCount = 1000;
 		//double thetaInterval = (Math.PI / 180 ) * 5.0;		// 'Hard' interval (based on absolute theta)
 		double thetaInterval = (maxtheta - mintheta) / roomsCount;		// 'Soft' interval (based on interval counts)
 		//double thetaInterval = (Math.PI / 180 ) * 5.0;		// 'Hard' interval (based on absolute theta)
