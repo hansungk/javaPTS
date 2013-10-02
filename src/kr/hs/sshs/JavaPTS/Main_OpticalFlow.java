@@ -17,7 +17,7 @@ import com.googlecode.javacv.FrameGrabber;
 import com.googlecode.javacv.FrameRecorder;
 import com.googlecode.javacv.cpp.opencv_core.IplImage;
 
-public class Main_SingleImage {
+public class Main_OpticalFlow {
 	// / Path to store resources
 	static final String PATH = "video/";
 
@@ -39,7 +39,7 @@ public class Main_SingleImage {
 	IplImage imgTemp;
 	
 	public static void main(String[] args) throws InterruptedException, FileNotFoundException, UnsupportedEncodingException {
-		Main_SingleImage m = new Main_SingleImage();
+		Main_OpticalFlow m = new Main_OpticalFlow();
 		CvSize _size = new CvSize(200, 300);
 		CvSize _winSize = new CvSize(10,10);
 		
@@ -57,7 +57,7 @@ public class Main_SingleImage {
 			// cvGoodFeaturesToTrack
 			m.imgEig = cvCreateImage(_size, IPL_DEPTH_32F, 1);
 			m.imgTemp = cvCreateImage(_size, IPL_DEPTH_32F, 1);
-			final int _maxCornerCount = 5000;
+			final int _maxCornerCount = 100;
 			CvPoint2D32f cornersA = new CvPoint2D32f(_maxCornerCount);
 			int[] cornerCount = {_maxCornerCount};
 			cvGoodFeaturesToTrack(
@@ -122,7 +122,7 @@ public class Main_SingleImage {
 				
 				System.out.print("Status of " + (i+1) + " [" + p0.x() + "," + p0.y() + "]	: " + status[i]);
 				
-				if (status[i]==0) {
+				if (status[i]==0) { 
 					System.out.println("	<<< Error -- Zero status");
 					continue;
 				} else if (featureErrors[i] > errorCriteria) {
@@ -136,7 +136,10 @@ public class Main_SingleImage {
 			}
 			double[][] successFlows = new double[successFlowsL.size()][2];
 			successFlowsL.toArray(successFlows);
+			
+			/// Calculation
 			findBgMovement(successFlows);
+			///
 			
 			canvas3.showImage(m.imgResult);
 			cvSaveImage(PATH+"opticalflow.jpg", m.imgResult);
@@ -178,106 +181,117 @@ public class Main_SingleImage {
 		// Find min and max
 		double mintheta = 2*Math.PI;
 		double maxtheta = 0;
-		for (double d : thetas) {
-			if (d < mintheta) mintheta = d;
-			if (d > maxtheta) maxtheta = d;
-		}
-		System.out.println("Maxtheta: " + maxtheta);
-		System.out.println("Mintheta: " + mintheta);
-		//double thetaInterval = (Math.PI / 180 ) * 5.0;		// 'Hard' interval (based on absolute theta)
-		double thetaInterval = (maxtheta - mintheta) / 2000;		// 'Soft' interval (based on interval counts)
-		int roomsCount = (int)Math.floor((maxtheta-mintheta) / thetaInterval) + 1;
-		List<ArrayList<Double>> rooms = new ArrayList<ArrayList<Double>>();
-		for(int i=0; i<roomsCount; i++) rooms.add(new ArrayList<Double>());	// initialize
-		for (double d : thetas) {
-			int whatroom = (int)Math.floor((d - mintheta) / thetaInterval);	// from 0
-			rooms.get(whatroom).add(d);
-		}
-		int probableRoom1=0, probableRoomCount1=0;
-		int probableRoom2=0, probableRoomCount2=0;
-		for (int i=0; i<roomsCount; i++) {
-			int thisRoomCount = rooms.get(i).size();
-			if (thisRoomCount > probableRoomCount1) {
-				probableRoomCount1 = thisRoomCount;
-				probableRoom1 = i;
-			}
-			if (probableRoomCount2 < thisRoomCount && thisRoomCount < probableRoomCount1) {
-				probableRoomCount2 = thisRoomCount;
-				probableRoom2 = i;
-			}
-		}
-		System.out.println("1st probable theta count: " + probableRoomCount1);
-		System.out.println("2nd probable theta count: " + probableRoomCount2);
-		//for(double d : rooms.get(probableRoom1)) System.out.print(d/Math.PI*180 + " ");
-		//for(double d : drooms.get(probableDRoom1)) System.out.print(d);
-		double sum1 = 0, sum2 = 0;
-		for (double d : rooms.get(probableRoom1)) {sum1 += d;}
-		for (double d : rooms.get(probableRoom2)) {sum2 += d;}
-		double probableTheta1 = sum1 / probableRoomCount1;
-		double probableTheta2 = sum2 / probableRoomCount2;
-		System.out.println("1st probable theta AVG: " + probableTheta1 / Math.PI * 180);
-		System.out.println("2nd probable theta AVG: " + probableTheta2 / Math.PI * 180);
-		System.out.println();
-		
-		/// Distance
-		
-		writer = new PrintWriter(PATH+"distance.txt","cp949");
-		ArrayList<Double> distances = new ArrayList<Double>();
-		for(int i=0; i<flowsCount; i++) {
-			double euclidlength = Math.sqrt(flows[i][0]*flows[i][0] + flows[i][1]*flows[i][1]);
-			distances.add(euclidlength);
-			writer.println(euclidlength);
-		}
-		writer.close();
-		// Find min and max
 		double mindistance = 2 * Math.PI;
 		double maxdistance = 0;
-		for (double d : distances) {
-			if (d < mindistance)
-				mindistance = d;
-			if (d > maxdistance)
-				maxdistance = d;
+		for (double[] d : flows) {
+			double theta = Math.atan2(d[1], d[0]);
+			double distance = Math.sqrt(d[0]*d[0] + d[1]*d[1]);
+			if (theta < mintheta) mintheta = theta;
+			if (theta > maxtheta) maxtheta = theta;
+			if (distance < mindistance) mindistance = distance;
+			if (distance > maxdistance) maxdistance = distance;
 		}
+		//double thetaInterval = (Math.PI / 180 ) * 5.0;		// 'Hard' interval (based on absolute theta)
+		double thetaInterval = (maxtheta - mintheta) / 100;		// 'Soft' interval (based on interval counts)
+		//double thetaInterval = (Math.PI / 180 ) * 5.0;		// 'Hard' interval (based on absolute theta)
+		double distanceInterval = (maxdistance - mindistance) / 100.0;		// 'Soft' interval (based on interval counts)
+		
+		// 'Rooms' where vectors get sorted in
+		List<ArrayList<double[]>> thetaRooms = new ArrayList<ArrayList<double[]>>();	
+		List<ArrayList<double[]>> distanceRooms = new ArrayList<ArrayList<double[]>>();	
+		int thetaRoomsCount = (int)Math.floor((maxdistance-mindistance) / distanceInterval) + 1;
+		int distanceRoomsCount = (int)Math.floor((maxtheta-mintheta) / thetaInterval) + 1;
+		for(int i=0; i<thetaRoomsCount; i++) distanceRooms.add(new ArrayList<double[]>());	// Initialize
+		for(int i=0; i<distanceRoomsCount; i++) thetaRooms.add(new ArrayList<double[]>());	// Initialize
+		// Sort and add vectors
+		for (double[] d : flows) {
+			double theta = Math.atan2(d[1], d[0]);
+			double distance = Math.sqrt(d[0]*d[0] + d[1]*d[1]);
+			int indexTheta = (int)Math.floor((theta - mintheta) / thetaInterval);	// from 0
+			int indexDistance = (int)Math.floor((distance - mindistance) / distanceInterval);	// from 0
+			thetaRooms.get(indexTheta).add(d);
+			distanceRooms.get(indexDistance).add(d);
+		}
+		
+		// Now let's find the most 'populated' rooms
+		ArrayList<double[]> biggestTRoom1 = null, biggestTRoom2 = null;
+		ArrayList<double[]> biggestDRoom1 = null, biggestDRoom2 = null;
+		int biggestTRoomSize1=0, biggestTRoomSize2=0;
+		int biggestDRoomSize1=0, biggestDRoomSize2=0;
+		double tSum1=0, tSum2=0, dSum1=0, dSum2=0;
+		for(ArrayList<double[]> al : thetaRooms) {
+			int roomSize = al.size();
+			if (biggestTRoomSize1 < roomSize) {
+				biggestTRoom1 = al;
+				biggestTRoomSize1 = roomSize;
+			}
+			if (biggestTRoomSize2 < roomSize && roomSize < biggestTRoomSize1) {
+				biggestTRoom2 = al;
+				biggestTRoomSize2 = roomSize;
+			}
+		}
+		for(ArrayList<double[]> al : distanceRooms) {
+			int roomSize = al.size();
+			if (biggestDRoomSize1 < roomSize) {
+				biggestDRoom1 = al;
+				biggestDRoomSize1 = roomSize;
+			}
+			if (biggestDRoomSize2 < roomSize && roomSize < biggestDRoomSize1) {
+				biggestDRoom2 = al;
+				biggestDRoomSize2 = roomSize;
+			}
+		}
+		// Calcualte average
+		for (double[] d : biggestTRoom1) {
+			double theta = Math.atan2(d[1], d[0]);
+			tSum1 += theta;
+		}
+		for (double[] d : biggestTRoom2) {
+			double theta = Math.atan2(d[1], d[0]);
+			tSum2 += theta;
+		}
+		for (double[] d : biggestDRoom1) {
+			double distance = Math.sqrt(d[0]*d[0] + d[1]*d[1]);
+			dSum1 += distance;
+		}
+		for (double[] d : biggestDRoom2) {
+			double distance = Math.sqrt(d[0]*d[0] + d[1]*d[1]);
+			dSum2 += distance;
+		}
+		double probableTheta1 = tSum1 / biggestTRoomSize1;
+		double probableTheta2 = tSum2 / biggestTRoomSize2;
+		double probableDistance1 = dSum1 / biggestDRoomSize1;
+		double probableDistance2 = dSum2 / biggestDRoomSize2;
+
+		// Massive sysouts
+		System.out.println();
+		System.out.println("Maxtheta: " + maxtheta);
+		System.out.println("Mintheta: " + mintheta);
+		System.out.println("1st probable theta count: " + biggestTRoomSize1);
+		System.out.println("2nd probable theta count: " + biggestTRoomSize2);
+		System.out.println("1st probable theta AVG: " + probableTheta1);		// Remember, Y-axis is inverted
+		System.out.println("2nd probable theta AVG: " + probableTheta2);
+		System.out.println();
 		System.out.println("Maxdistance: " + maxdistance);
 		System.out.println("Mindistance: " + mindistance);
-		//double thetaInterval = (Math.PI / 180 ) * 5.0;		// 'Hard' interval (based on absolute theta)
-		double distanceInterval = (maxdistance - mindistance) / 2000.0;		// 'Soft' interval (based on interval counts)
-		int droomsCount = (int)Math.floor((maxdistance-mindistance) / distanceInterval) + 1;
-		List<ArrayList<Double>> drooms = new ArrayList<ArrayList<Double>>();
-		for(int i=0; i<droomsCount; i++) drooms.add(new ArrayList<Double>());	// initialize
-		for (double d : distances) {
-			int whatroom = (int)Math.floor((d - mindistance) / distanceInterval);	// from 0
-			drooms.get(whatroom).add(d);
-		}
-		int probableDRoom1=0, probableDRoomCount1=0;
-		int probableDRoom2=0, probableDRoomCount2=0;
-		for (int i=0; i<droomsCount; i++) {
-			int thisDRoomCount = drooms.get(i).size();
-			if (thisDRoomCount > probableDRoomCount1) {
-				probableDRoomCount1 = thisDRoomCount;
-				probableDRoom1 = i;
-			}
-			if (probableDRoomCount2 < thisDRoomCount && thisDRoomCount < probableDRoomCount1) {
-				probableDRoomCount2 = thisDRoomCount;
-				probableDRoom2 = i;
-			}
-		}
-		System.out.println("1st probable distance count: " + probableDRoomCount1);
-		System.out.println("2nd probable distance count: " + probableDRoomCount2);
-		//for(double d : drooms.get(probableDRoom1)) System.out.print(d);
-		sum1 = 0; sum2 = 0;
-		
-		for (double d : drooms.get(probableDRoom1)) {sum1 += d;}
-		for (double d : drooms.get(probableDRoom2)) {sum2 += d;}
-		double probableDistance1 = sum1 / probableDRoomCount1;
-		double probableDistance2 = sum2 / probableDRoomCount2;
+		System.out.println("1st probable distance count: " + biggestDRoomSize1);
+		System.out.println("2nd probable distance count: " + biggestDRoomSize2);
 		System.out.println("1st probable distance AVG: " + probableDistance1);
 		System.out.println("2nd probable distance AVG: " + probableDistance2);
 		System.out.println();
+		
+		// Tiny file writes
 		writer = new PrintWriter(PATH+"result.txt", "cp949");
 		writer.println("Distance: " + probableDistance1);
 		writer.println("Theta   : " + probableTheta1);
 		writer.close();
+	}
+	
+	/**
+	 * Solve Least Square Problem and find the 'most appropriate' vector.
+	 */
+	public void findThetaDistance() {
+		
 	}
 	
 	public String doubleArrayToString(double[] ds) {
