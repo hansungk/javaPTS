@@ -8,10 +8,17 @@ package kr.hs.sshs.JavaPTS;
 public class Vector {
 	private double x;
 	private double y;
+	private int index;
 	
 	public Vector(double x, double y) {
 		this.x = x;
 		this.y = y;
+		this.index = -1; // Disabled
+	}
+	public Vector(double x, double y, int index) {
+		this.x = x;
+		this.y = y;
+		this.index = index; // Enabled
 	}
 	public double x() {
 		return this.x;
@@ -25,6 +32,12 @@ public class Vector {
 	public void y(double y) {
 		this.y = y;
 	}
+	public void setIndex(int index) {
+		this.index = index;
+	}
+	public int getIndex() {
+		return index;
+	}
 	
 	public Vector add(Vector v_add) {
 		return new Vector(x + v_add.x(), y + v_add.y());
@@ -37,5 +50,11 @@ public class Vector {
 	}
 	public static Vector sub(Vector v1, Vector v2){
 		return new Vector(v1.x() - v2.x(), v1.y() - v2.y());
+	}
+	public double theta() {
+		return Math.atan2(y, x);
+	}
+	public double length() {
+		return Math.sqrt(x*x + y*y);
 	}
 }
