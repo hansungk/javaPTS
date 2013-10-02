@@ -322,6 +322,8 @@ public class Main {
 		//cvSmooth(imgBW, imgBW, CV_GAUSSIAN, 7);
 		cvCanny(imgBW,imgSobel,80,200,3);
 		//cvCanny(imgMorph,imgMorphSobel,80,200,3);
+		
+		
 
 		switch (flag_BW) {
 		case 'c' :

@@ -8,9 +8,10 @@ import com.googlecode.javacv.cpp.opencv_core.IplImage;
 
 public class SatChangeDetect {
 	static IplImage prev_rgb, next_rgb, prev, next;
-	static int h_thresh = 100, s_thresh = 160, v_thresh=350, singlethresh=40;
-	static int[][] h_subst, s_subst, v_subst; 
+	static int /*h_thresh = 100, s_thresh = 160,*/ v_thresh=350, singlethresh=40;
+	static int[][] /*h_subst, s_subst,*/ v_subst; 
 	int[][] detect;
+	static int mX=0, mY=0;
 	
 	static CvSize imgsize;
 	static int width;
@@ -29,8 +30,8 @@ public class SatChangeDetect {
 		next = cvCreateImage(cvSize(next_rgb.width(),next_rgb.height()),IPL_DEPTH_8U,1);
 		detect = new int[prev_rgb.width()][prev_rgb.height()];
 		
-		h_subst = new int[prev_rgb.width()][prev_rgb.height()];
-		s_subst = new int[prev_rgb.width()][prev_rgb.height()];
+		//h_subst = new int[prev_rgb.width()][prev_rgb.height()];
+		//s_subst = new int[prev_rgb.width()][prev_rgb.height()];
 		v_subst = new int[prev_rgb.width()][prev_rgb.height()];
 		
 		imgsize = cvGetSize(prev);
@@ -41,25 +42,30 @@ public class SatChangeDetect {
 		cvSmooth(prev, prev, CV_GAUSSIAN, 3 );
 		cvCvtColor(next_rgb, next, CV_RGB2GRAY);
 		cvSmooth(next, next, CV_GAUSSIAN, 3 );
-
-		for (int i=0;i<width;i++){
-			for (int j=0;j<height;j++) {
-				detect[i][j]=0;				
-				v_subst[i][j] = (int) -(cvGetReal2D(prev,j,i)-cvGetReal2D(next,j,i)); // Examine Value difference
+		
+		for(int x=0; x<width; x++){
+			for(int y=0; y<height; y++){
+				if((mX>0 && x<mX) || (mY>0 && y<mY) || (mX<0 && x>=_size.width()+mX) || (mY<0 && y>=_size.height()+mY)) {
+					v_subst[x][y]=0;
+				}
+				else{
+					int s = (int) Math.abs(cvGetReal2D(next,y,x)-cvGetReal2D(prev,y-mY,x-mX));
+					v_subst[x][y]=s;
+				}
 			}
 		}
 		
-		for (int i=30;i<width-30;i++) {
-			for (int j=30;j<height-60;j++){
+		for (int x=30;x<width-30;x++) {
+			for (int y=30;y<height-60;y++){
 				// if(compare_s(i,j)>s_thresh && compare_v(i,j)>v_thresh)
-				if(v_subst[i][j]>singlethresh){
-					if (compare_v(i,j)>v_thresh)
-						detect[i][j]=255;
+				if(v_subst[x][y]>singlethresh){
+					if (compare_v(x,y)>v_thresh)
+						detect[x][y]=255;
 					else
-						detect[i][j]=0;
+						detect[x][y]=0;
 				}
 				else
-					detect[i][j]=0;
+					detect[x][y]=0;
 			}
 		}
 		
@@ -68,7 +74,7 @@ public class SatChangeDetect {
 		return detect;
 	}
 	
-	public int compare_h(int x, int y) {
+	/*public int compare_h(int x, int y) {
 		int result=0;
 		for (int i=x-1;i<x+2;i++){
 			for (int j=y-1;j<y+2;j++){
@@ -86,7 +92,7 @@ public class SatChangeDetect {
 			}
 		}
 		return result;
-	}
+	}*/
 	
 	public int compare_v(int x, int y) {
 		int result=0;
