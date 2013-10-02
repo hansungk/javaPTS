@@ -180,15 +180,13 @@ public class Main_OpticalFlow {
 			Vector APoint = APoints.get(i);
 			Vector BPoint = BPoints.get(i);
 			flows.add(Vector.sub(BPoint, APoint));
-		}
-		
-		for(int i=0; i<flows.size(); i++) {
+		}		
+		/*for(int i=0; i<flows.size(); i++) {
 			Vector v = flows.get(i);
-			double theta = Math.atan2(v.y(), v.x());
-			double distance = Math.sqrt(v.x()*v.x() + v.y()*v.y());
+			double theta = v.theta();
+			double distance = v.length();
 			System.out.println("Flow " + i + ": [" + v.x() + ", " + v.y() + "] theta:" + theta + " distance: " + distance);
-		}
-		System.out.println("(5,3)-(2,7)= " + (new Vector(5,3).sub(new Vector(2,7))).x() + ", " + (new Vector(5,3).sub(new Vector(2,7))).y());
+		}*/
 		
 		///
 		/// Calculation
@@ -199,17 +197,13 @@ public class Main_OpticalFlow {
 		double mindistance = 1000.0;
 		double maxdistance = 0.0;
 		for (Vector v : flows) {
-			double theta = Math.atan2(v.y(), v.x());
-			double distance = Math.sqrt(v.x()*v.x() + v.y()*v.y());
+			double theta = v.theta();
+			double distance = v.length();
 			if (theta < mintheta) mintheta = theta;
 			if (theta > maxtheta) maxtheta = theta;
 			if (distance < mindistance) mindistance = distance;
 			if (distance > maxdistance) maxdistance = distance;
 		}
-		System.out.println("Maxtheta: " + maxtheta);
-		System.out.println("Mintheta: " + mintheta);
-		System.out.println("Maxdistance: " + maxdistance);
-		System.out.println("Mindistance: " + mindistance);
 		int roomsCount = 100;
 		//double thetaInterval = (Math.PI / 180 ) * 5.0;		// 'Hard' interval (based on absolute theta)
 		double thetaInterval = (maxtheta - mintheta) / roomsCount;		// 'Soft' interval (based on interval counts)
@@ -224,9 +218,11 @@ public class Main_OpticalFlow {
 		for(int i=0; i<thetaRoomsCount; i++) thetaRooms.add(new ArrayList<Vector>());	// Initialize
 		for(int i=0; i<distanceRoomsCount; i++) distanceRooms.add(new ArrayList<Vector>());	// Initialize
 		// Sort and add vectors
-		for (Vector v : flows) {
-			double theta = Math.atan2(v.y(), v.x());
-			double distance = Math.sqrt(v.x()*v.x() + v.y()*v.y());
+		for (int i=0; i<flows.size(); i++) {
+			Vector v = flows.get(i);
+			v.setIndex(i);				// Important!! : Index(i) will be used when retrieving back the pointA and pointB vector
+			double theta = v.theta();
+			double distance = v.length();
 			int indexTheta = (int)Math.floor((theta - mintheta) / thetaInterval);	// from 0
 			int indexDistance = (int)Math.floor((distance - mindistance) / distanceInterval);	// from 0
 			if(indexDistance == roomsCount) indexDistance--; 
@@ -270,20 +266,16 @@ public class Main_OpticalFlow {
 		}
 		// Calculate average
 		for (Vector v : biggestTRoom1) {
-			double theta = Math.atan2(v.y(), v.x());
-			tSum1 += theta;
+			tSum1 += v.theta();
 		}
 		for (Vector v : biggestTRoom2) {
-			double theta = Math.atan2(v.y(), v.x());
-			tSum2 += theta;
+			tSum2 += v.theta();
 		}
 		for (Vector v : biggestDRoom1) {
-			double distance = Math.sqrt(v.x()*v.x() + v.y()*v.y());
-			dSum1 += distance;
+			dSum1 += v.length();
 		}
 		for (Vector v : biggestDRoom2) {
-			double distance = Math.sqrt(v.x()*v.x() + v.y()*v.y());
-			dSum2 += distance;
+			dSum2 += v.length();
 		}
 		double probableTheta1 = tSum1 / biggestTRoomSize1;
 		double probableTheta2 = tSum2 / biggestTRoomSize2;
@@ -313,20 +305,28 @@ public class Main_OpticalFlow {
 		writer.println("Theta   : " + probableTheta1);
 		writer.close();
 		
-		findThetaDistance(APoints, BPoints);
+		List<Vector> backgroundFlows = biggestTRoom1;
+		List<Vector> backgroundAPoints = new ArrayList<Vector>();
+		List<Vector> backgroundBPoints = new ArrayList<Vector>();
+		for(int i=0; i<backgroundFlows.size(); i++) {
+			Vector v = backgroundFlows.get(i);
+			int index = v.getIndex();
+			backgroundAPoints.add(APoints.get(index));
+			backgroundBPoints.add(BPoints.get(index));
+		}
+		
+		findThetaDistance(backgroundAPoints, backgroundBPoints, backgroundFlows);
 	}
 	
 	/**
 	 * Solve Least Square Problem and find the 'most appropriate' vector.
+	 * @param flows 
 	 */
-	public static void findThetaDistance(List<Vector> APoints, List<Vector> BPoints) {		
-		// Subtract 1 vector from other vectors -> Rotation
-		List<Vector> flows = new ArrayList<Vector>();
-		for(int i=0; i<APoints.size(); i++) {
-			Vector APoint = APoints.get(i);
-			Vector BPoint = BPoints.get(i);
-			flows.add(Vector.sub(BPoint, APoint));
-		}		
+	public static void findThetaDistance(List<Vector> APoints, List<Vector> BPoints, List<Vector> flows) {
+		assert (APoints.size()==BPoints.size() && BPoints.size()==flows.size()):"WTF index doesn't match??!";
+//		System.out.println("Background flow vectors: " + flows.size());
+		
+//		Subtract 1 vector from other vectors -> Rotation
 		Vector AStandard = APoints.get(0); // Standard flow vector to subtract
 		Vector BStandard = BPoints.get(0);
 		
@@ -338,19 +338,33 @@ public class Main_OpticalFlow {
 			deltaAPoints.add(APoint.sub(AStandard));
 			deltaBPoints.add(BPoint.sub(BStandard));
 		}
+
+		// TEST AREA
+
+		if (false) {
+			deltaAPoints.clear();
+			deltaBPoints.clear();
+			deltaAPoints.add(new Vector(0.99619, 0.087156));
+			deltaAPoints.add(new Vector(1.9319, 0.51764));
+			deltaAPoints.add(new Vector(2.7189, 1.2679));
+			deltaBPoints.add(new Vector(0.70711, 0.70711));
+			deltaBPoints.add(new Vector(1.1472, 1.6383));
+			deltaBPoints.add(new Vector(1.2679, 2.7189));
+		}
 		
 		///
 		/// Rather primitive matrix calculation
 		///
-		int n=flows.size();
+		int n=deltaAPoints.size();
+		System.out.println(n);
 		// S=(A^T)*A
 		double s11=0, s12=0, s21=0, s22=0;
-		Vector flowk;
+		Vector Ak;
 		for (int k=1; k<n; k++) {
-			flowk = flows.get(k);
-			s11 += flowk.x()*flowk.x();
-			s12 += flowk.x()*flowk.y();
-			s22 += flowk.y()*flowk.y();
+			Ak = deltaAPoints.get(k);
+			s11 += Ak.x()*Ak.x();
+			s12 += Ak.x()*Ak.y();
+			s22 += Ak.y()*Ak.y();
 		}
 		s21 = s12;
 		// SI = S^(-1)
@@ -367,10 +381,13 @@ public class Main_OpticalFlow {
 		}
 		// Approx. solution of A*p=b (A:deltaAPoints, p:(cosT,sinT), b:x of deltaBPoints)
 		double p1 = si11*r1 + si12*r2;	// ~ cosT
-		double p2 = si21*r1 * si22*r2;	// ~ sinT
+		double p2 = si21*r1 + si22*r2;	// ~ sinT
 		
 		System.out.println("cosT ~ "+p1);
 		System.out.println("sinT ~ "+p2);
+		
+		// Now get p and q
+		
 	}
 	
 	public String doubleArrayToString(double[] ds) {
