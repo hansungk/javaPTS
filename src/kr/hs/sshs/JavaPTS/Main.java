@@ -116,7 +116,7 @@ public class Main {
 		recorder = new FFmpegFrameRecorder(PATH + "video/trash.mp4", 640, 480);
 		recorder.setFrameRate(30);
 		recorder.start();
-		grabber = new FFmpegFrameGrabber(PATH + "video/fort2.mp4");
+		grabber = new FFmpegFrameGrabber(PATH + "video/corner.mp4");
 		grabber.start();
 
 		// Get frame size
@@ -155,8 +155,8 @@ public class Main {
 			//cvSetImageROI(m.imgSobel, ballcrop);
 			m.imgCropped = cvCreateImage(cvGetSize(m.imgSobel),IPL_DEPTH_8U,1);
 			cvCopy(m.imgSobel,m.imgCropped);
-			//cvResetImageROI(m.imgSobel);
-			CatcherDetect.main(m.imgSobel);
+			cvResetImageROI(m.imgSobel);
+			CatcherDetect.main(m.imgCropped);
 			
 			cvCopy(m.imgTmpl, m.imgTmpl_prev);
 
