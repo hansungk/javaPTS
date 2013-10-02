@@ -8,6 +8,7 @@ import java.awt.event.KeyEvent;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.Vector;
 
 import com.googlecode.javacv.CanvasFrame;
 import com.googlecode.javacv.FFmpegFrameGrabber;
@@ -30,6 +31,7 @@ public class Main {
 	static CanvasFrame canvas6; //Catcher Screen
 	//static CanvasFrame canvas7;
 	//static CanvasFrame canvas8;
+	static CanvasFrame canvas9;
 
 	/// FFmpeg variables
 	static FrameGrabber grabber;
@@ -46,6 +48,7 @@ public class Main {
 	IplImage imgBall; //Ball Image
 	IplImage imgSobel; //Sobel Image
 	IplImage imgCropped;
+	IplImage imgTemp;
 	//IplImage imgMorph;
 	//IplImage imgMorphSobel;
 
@@ -53,7 +56,7 @@ public class Main {
 	static CvSize _size;
 	static int width;
 	static int height;
-	static int cropsize=60;
+	static int cropsize=70;
 
 	/// Current frame number
 	static int framecount = 1;
@@ -107,7 +110,7 @@ public class Main {
 		canvas6 = new CanvasFrame("Catcher",CV_WINDOW_AUTOSIZE);
 		//canvas7 = new CanvasFrame("Morphology",CV_WINDOW_AUTOSIZE);
 		//canvas8 = new CanvasFrame("MorphSobel", CV_WINDOW_AUTOSIZE);
-		
+		canvas9 = new CanvasFrame("VCD",CV_WINDOW_AUTOSIZE);
 
 		// Initialize FrameRecorder/FrameGrabber
 		recorder = new FFmpegFrameRecorder(PATH + "video/trash.mp4", 640, 480);
@@ -149,7 +152,7 @@ public class Main {
 			//Crop Image Around the Final Ball Point
 			ballcrop = new CvRect(Math.max(ballfinal.x()-cropsize,0), Math.max(ballfinal.y()-cropsize,0), Math.min(2*cropsize,2*(width-ballfinal.x())), Math.min(2*cropsize,2*(height-ballfinal.y())));
 			
-			cvSetImageROI(m.imgSobel, ballcrop);
+			//cvSetImageROI(m.imgSobel, ballcrop);
 			m.imgCropped = cvCreateImage(cvGetSize(m.imgSobel),IPL_DEPTH_8U,1);
 			cvCopy(m.imgSobel,m.imgCropped);
 			cvResetImageROI(m.imgSobel);
@@ -163,7 +166,8 @@ public class Main {
 			canvas5.showImage(m.imgSobel);
 			canvas6.showImage(m.imgCropped);
 			//canvas7.showImage(m.imgMorph);
-			//canvas8.showImage(m.imgMorphSobel);		
+			//canvas8.showImage(m.imgMorphSobel);
+			canvas9.showImage(m.imgTemp);
 
 			System.out.println("############## FRAME " + framecount + " ##############");
 
@@ -221,6 +225,7 @@ public class Main {
 		canvas6.dispose();
 		//canvas7.dispose();
 		//canvas8.dispose();
+		canvas9.dispose();
 
 		System.out.println("(TERMINATED)");
 	}
@@ -294,6 +299,7 @@ public class Main {
 		imgBW = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		imgResult = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		imgSobel = cvCreateImage(_size,IPL_DEPTH_8U,1);
+		imgTemp = cvCreateImage(_size,IPL_DEPTH_8U,1);
 		cvCvtColor(imgTmpl, imgBW, CV_RGB2GRAY);
 		
 		binary = new int[width][height];
@@ -330,6 +336,14 @@ public class Main {
 			scd = new SatChangeDetect();
 			scd.initialize(imgTmpl_prev, imgTmpl);
 			binary = scd.detectChange();
+			
+			//Printing SCD Result
+			for(int x = 0; x<width; x++){
+				for(int y = 0; y<height; y++){
+					if(binary[x][y]==0) cvSetReal2D(imgTemp,y,x,0);
+					else cvSetReal2D(imgTemp,y,x,255);
+				}
+			}
 
 			/*
 			/// BLOB CROSSING 
@@ -353,11 +367,20 @@ public class Main {
 			bl = new Blob_Labeling();
 			blobs = bl.detectBlob(binary, width, height);// DETECT BLOB
 			binary = bl.print;
+			
+			//Print Blobs After Simple Blob filtering
+			for(int x = 0; x<width; x++){
+				for(int y = 0; y<height; y++){
+					if(binary[x][y]==0) cvSetReal2D(imgTemp,y,x,0);
+					else cvSetReal2D(imgTemp,y,x,255);
+				}
+			}
 			/// BLOB LABELING END
 
 			///
 			/// BLOB FILTERING
-			blobFiltering(blobs, 3);
+			if(!balldetermined)
+				blobFiltering(blobs, 4);
 			///
 			///
 
@@ -391,8 +414,8 @@ public class Main {
 
 				if (!addedBlob) { // NOT FOUND BLOB
 					
-					if (cc.numOfMissingBlobs > 0) { // If this blob should be removed
-						if(balldetermined){
+					if (balldetermined) { //If this ball is determined
+						if(cc.numOfMissingBlobs > 0){// If ball is considered to be caught
 							if(ballCandidates.size()==1){
 								cc.centers.remove(cc.centers.size() - 1);
 								detectedball = new Candidate(cc);
@@ -400,22 +423,19 @@ public class Main {
 								System.out.println("BALL WAS CAUGHT /nf");
 								System.out.println("The Speed of Pitch is " + 1503/detectedball.centers.size() + "km/h");
 								ballfinal=detectedball.centers.get(detectedball.centers.size()-1);
+								SatChangeDetect.v_thresh=350;
+								SatChangeDetect.singlethresh=40;
 								balldetermined=false;
 							}
 						}
-						// Do nothing, let this blob removed (not added)
-					} else {						
-						
-						// SUCCESS!!
-						ballCandidates.add(new Candidate(cc)); // auto-updated
-						ballCandidates.get(ballCandidates.size()-1).addMissed();
-								
-						
-						/*
-						// Also SUCCESS!
-						cc.addMissed();
-						ballCandidates.add(new Candidate(cc));	
-						*/	
+						else
+							// Do nothing, let this blob removed (not added)
+							ballCandidates.add(new Candidate(cc)); // auto-updated
+							ballCandidates.get(ballCandidates.size()-1).addMissed();
+							
+					} else {
+						// Non-ball candidate blob jumping : Do nothing, let this blob removed (not added)
+						System.out.println("Candidate deletion by missing blob");			
 					}
 				}
 
@@ -438,6 +458,16 @@ public class Main {
 						ballCandidates.remove(q);
 					}
 				}
+				
+				int x1=Math.max(0,ballCandidates.get(0).xROImin());
+				int x2=Math.min(width-1,ballCandidates.get(0).xROImax());
+				int y1=Math.max(0,ballCandidates.get(0).yROImin());
+				int y2=Math.min(height-1,ballCandidates.get(0).yROImax());
+				
+				int avg = ValAverage(new CvPoint(x1,y1), new CvPoint(x2,y2), imgBW);
+				SatChangeDetect.singlethresh = (255-avg)/8;
+				SatChangeDetect.v_thresh = (255-avg);
+				
 				System.out.println("BALL IS DETERMINED");
 
 			}
@@ -501,7 +531,6 @@ public class Main {
 	* @param adjBlobNumThreshold Minimum number of found adjacent blobs required to remove current blob.
 	*/
 	public void blobFiltering(List<Info> blobs, int adjBlobNumThreshold) {
-
 
 		// Thickness of the searching box, wrapping around each blob
 		// (set 0 for testing)
@@ -697,6 +726,8 @@ public class Main {
 					System.out.println("The Speed of Pitch is " + 1080/detectedball.centers.size() + "km/h");
 					ballfinal=detectedball.centers.get(detectedball.centers.size()-1);
 					ballCandidates.remove(0);
+					SatChangeDetect.v_thresh=350;
+					SatChangeDetect.singlethresh=40;
 					balldetermined=false;
 				}
 				else ballCandidates.remove(i);
@@ -717,6 +748,7 @@ public class Main {
 		cvReleaseImage(imgCandidate);
 		cvReleaseImage(imgSobel);
 		cvReleaseImage(imgCropped);
+		cvReleaseImage(imgTemp);
 	}
 	
 	public String doubleArrayToString(double[] ds) {
@@ -725,5 +757,17 @@ public class Main {
 			result += ds[i] + " ";
 		}
 		return result;
+	}
+	
+	public int ValAverage(CvPoint a, CvPoint b, IplImage bw){
+		
+		int sum=0;
+		for(int x=a.x(); x<b.x()+1; x++){
+			for(int y=a.y(); y<b.y()+1; y++){
+				sum+=cvGetReal2D(bw, y, x);
+			}
+		}
+		
+		return (int) (sum/((b.x()-a.x()+1)*(b.y()-a.y()+1)));
 	}
 }
