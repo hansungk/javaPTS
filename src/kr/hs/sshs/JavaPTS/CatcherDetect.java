@@ -171,7 +171,7 @@ public class CatcherDetect {
 				continue;
 			}
 			
-			if(rEnd[n]-lEnd[k]<10) {
+			if(rEnd[n]-lEnd[k]<12) {
 				//System.out.println("shape not catcher");
 				continue;
 			}

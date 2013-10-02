@@ -8,6 +8,7 @@ import java.awt.event.KeyEvent;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.Vector;
 
 import com.googlecode.javacv.CanvasFrame;
 import com.googlecode.javacv.FFmpegFrameGrabber;
@@ -55,7 +56,7 @@ public class Main {
 	static CvSize _size;
 	static int width;
 	static int height;
-	static int cropsize=60;
+	static int cropsize=70;
 
 	/// Current frame number
 	static int framecount = 1;
@@ -110,7 +111,6 @@ public class Main {
 		//canvas7 = new CanvasFrame("Morphology",CV_WINDOW_AUTOSIZE);
 		//canvas8 = new CanvasFrame("MorphSobel", CV_WINDOW_AUTOSIZE);
 		canvas9 = new CanvasFrame("VCD",CV_WINDOW_AUTOSIZE);
-		
 
 		// Initialize FrameRecorder/FrameGrabber
 		recorder = new FFmpegFrameRecorder(PATH + "video/trash.mp4", 640, 480);
@@ -152,11 +152,11 @@ public class Main {
 			//Crop Image Around the Final Ball Point
 			ballcrop = new CvRect(Math.max(ballfinal.x()-cropsize,0), Math.max(ballfinal.y()-cropsize,0), Math.min(2*cropsize,2*(width-ballfinal.x())), Math.min(2*cropsize,2*(height-ballfinal.y())));
 			
-			cvSetImageROI(m.imgSobel, ballcrop);
+			//cvSetImageROI(m.imgSobel, ballcrop);
 			m.imgCropped = cvCreateImage(cvGetSize(m.imgSobel),IPL_DEPTH_8U,1);
 			cvCopy(m.imgSobel,m.imgCropped);
-			cvResetImageROI(m.imgSobel);
-			CatcherDetect.main(m.imgCropped);
+			//cvResetImageROI(m.imgSobel);
+			CatcherDetect.main(m.imgSobel);
 			
 			cvCopy(m.imgTmpl, m.imgTmpl_prev);
 
@@ -460,9 +460,9 @@ public class Main {
 				}
 				
 				int x1=Math.max(0,ballCandidates.get(0).xROImin());
-				int x2=Math.max(width-1,ballCandidates.get(0).xROImax());
+				int x2=Math.min(width-1,ballCandidates.get(0).xROImax());
 				int y1=Math.max(0,ballCandidates.get(0).yROImin());
-				int y2=Math.max(height-1,ballCandidates.get(0).yROImax());
+				int y2=Math.min(height-1,ballCandidates.get(0).yROImax());
 				
 				int avg = ValAverage(new CvPoint(x1,y1), new CvPoint(x2,y2), imgBW);
 				SatChangeDetect.singlethresh = (255-avg)/8;
@@ -531,7 +531,6 @@ public class Main {
 	* @param adjBlobNumThreshold Minimum number of found adjacent blobs required to remove current blob.
 	*/
 	public void blobFiltering(List<Info> blobs, int adjBlobNumThreshold) {
-
 
 		// Thickness of the searching box, wrapping around each blob
 		// (set 0 for testing)
