@@ -4,6 +4,8 @@ import static com.googlecode.javacv.cpp.opencv_core.*;
 import static com.googlecode.javacv.cpp.opencv_imgproc.*;
 import static com.googlecode.javacv.cpp.opencv_highgui.*;
 import static com.googlecode.javacv.cpp.opencv_video.cvCalcOpticalFlowPyrLK;
+import static com.googlecode.javacv.cpp.opencv_video.CV_LKFLOW_PYR_A_READY;
+import static com.googlecode.javacv.cpp.opencv_video.CV_LKFLOW_INITIAL_GUESSES;
 
 import java.awt.event.KeyEvent;
 import java.io.FileNotFoundException;
@@ -18,15 +20,18 @@ import com.googlecode.javacv.FrameRecorder;
 import com.googlecode.javacv.cpp.opencv_core.IplImage;
 
 public class Main_OpticalFlow {
-	// / Path to store resources
+	/// Path to store resources
 	static final String PATH = "video/";
 
-	// / OpenCV Canvases
+	/// OpenCV Canvases
 	static CanvasFrame canvas1; // Canvas for showing result image
 	static CanvasFrame canvas2; // Canvas for showing original(BW) image
 	static CanvasFrame canvas3; // Canvas for showing result image
 	
-	// / FFmpeg variables
+	/// Image size
+	static CvSize _size;
+
+	/// FFmpeg variables
 	static FrameGrabber grabber;
 	static FrameRecorder recorder;
 
@@ -40,8 +45,7 @@ public class Main_OpticalFlow {
 	
 	public static void main(String[] args) throws InterruptedException, FileNotFoundException, UnsupportedEncodingException {
 		Main_OpticalFlow m = new Main_OpticalFlow();
-		CvSize _size = new CvSize(200, 300);
-		CvSize _winSize = new CvSize(10,10);
+		_size = new CvSize(200, 300);
 		
 		m.imgPrev = cvLoadImage(PATH+"ssA.jpg", CV_LOAD_IMAGE_GRAYSCALE);
 		m.imgCurr = cvLoadImage(PATH+"ssB.jpg", CV_LOAD_IMAGE_GRAYSCALE);
@@ -54,101 +58,12 @@ public class Main_OpticalFlow {
 		canvas2.showImage(m.imgCurr);
 
 		while (true) {
-			// cvGoodFeaturesToTrack
-			m.imgEig = cvCreateImage(_size, IPL_DEPTH_32F, 1);
-			m.imgTemp = cvCreateImage(_size, IPL_DEPTH_32F, 1);
-			final int _maxCornerCount = 600;
-			CvPoint2D32f cornersA = new CvPoint2D32f(_maxCornerCount);
-			int[] cornerCount = {_maxCornerCount};
-			cvGoodFeaturesToTrack(
-					m.imgPrev,
-					m.imgEig,
-					m.imgTemp,
-					cornersA,
-					cornerCount,
-					0.10,
-					0.1,
-					null, 3, 0, 0.04
-					);
-			System.out.println("# of corners: " + cornerCount[0]);
-			//System.out.println(m.doubleArrayToString(cornersA.get()));
-			
-			// Find subpizel corners
-			cvFindCornerSubPix(
-					m.imgPrev,
-					cornersA,
-					cornerCount[0],
-					_winSize,
-					cvSize(-1,-1),
-					cvTermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, .03)
-					);
-			
-			// Optical Flow
-			CvSize _pyrSize = new CvSize(_size.width()+8, _size.height()/3+1);
-			IplImage imgPyrA = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
-			IplImage imgPyrB = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
-			CvPoint2D32f cornersB = new CvPoint2D32f(_maxCornerCount);
-			
-			byte[] status = new byte[cornerCount[0]];
-			float[] featureErrors = new float[cornerCount[0]];
-			
-			cvCalcOpticalFlowPyrLK(
-					m.imgPrev,
-					m.imgCurr,
-					imgPyrA,
-					imgPyrB,
-					cornersA,
-					cornersB,
-					cornerCount[0],
-					_winSize,
-					5,
-					status,
-					featureErrors,
-					cvTermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, .3),
-					0
-					);
-			System.out.println("CornerB: " + cornersB.get().length);
-			System.out.println(m.doubleArrayToString(cornersB.get()));
-			// Show what we are looking at
-			float errorCriteria = 500.0f;
-			List<Vector> successAPointsL = new ArrayList<Vector>();		// Prev
-			List<Vector> successBPointsL = new ArrayList<Vector>();		// Curr
-			
-			for (int i=0; i<cornerCount[0]; i++) {
-				double p0x = cornersA.get()[2*i];
-				double p0y = cornersA.get()[2*i+1];
-				double p1x = cornersB.get()[2*i];
-				double p1y = cornersB.get()[2*i+1];
-				CvPoint p0 = new CvPoint((int)p0x, (int)p0y);
-				CvPoint p1 = new CvPoint((int)p1x, (int)p1y);
-				
-				System.out.print("Status of " + (i+1) + " [" + p0.x() + "," + p0.y() + "]	: " + status[i]);
-				
-				if (status[i]==0) { 
-					System.out.println("	<<< Error -- Zero status");
-					continue;
-				} else if (featureErrors[i] > errorCriteria) {
-					System.out.println("	<<< Error -- Too long error (" + featureErrors[i] + ", criteria:" + errorCriteria + ")");
-					continue;
-				} else { // Passed the test!
-					System.out.println();
-					successAPointsL.add(new Vector(p0x, p0y));
-					successBPointsL.add(new Vector(p1x, p1y));
-				}							
-				cvLine(m.imgResult, p0, p1, CV_RGB(0, 255, 0), 2, 0, 0);
-			}
-			assert (successAPointsL.size() == successBPointsL.size()): "success points list size error";	
-			
-			/// Calculation
-			try {
-				findBgMovement(successAPointsL, successBPointsL);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			///
-			
 			canvas3.showImage(m.imgResult);
 			cvSaveImage(PATH+"opticalflow.jpg", m.imgResult);
+
+			/// Process optical flow and find the background movement vector
+			IplImage imgPyrA = null, imgPyrB = null;	//TODO 광민 여긴 너가 알아서해
+			m.processOpticalFlow(m.imgPrev, m.imgCurr, imgPyrA, imgPyrB, false);
 
 			KeyEvent key = canvas1.waitKey(0);
 			if (key != null) {
@@ -169,12 +84,130 @@ public class Main_OpticalFlow {
 		canvas3.dispose();
 		System.out.println("[TERMINATED]");
 	}
-	
-	public static void findBgMovement(List<Vector> APoints, List<Vector> BPoints) throws Exception {
+
+	/**
+	 *
+	 * @param imgPrev		8-bit single channel image of prev frame
+	 * @param imgCurr		8-bit single channel image of curr frame
+	 * @param imgPyrA		32-bit single channel image used to compute pyramid from prev frame
+	 * @param imgPyrB		32-bit single channel image used to compute pyramid from curr frame
+	 * @param isPyrANeeded	true:  will use imgCurr of 1 cycle ago as imgPrev of now
+	 * 						false: will cvCreateImage a new one
+	 * @return double[] {xshift, yshift}
+	 */
+	public double[] processOpticalFlow(IplImage imgPrev, IplImage imgCurr, IplImage imgPyrA, IplImage imgPyrB, boolean isPyrANeeded) {
+		CvSize _winSize = new CvSize(10,10);
+
+		// Find good features to track
+		IplImage imgEig = cvCreateImage(_size, IPL_DEPTH_32F, 1);
+		IplImage imgTemp = cvCreateImage(_size, IPL_DEPTH_32F, 1);
+
+		// Max corner counts to find from the prev frame
+		final int _maxCornerCount = 600;
+
+		CvPoint2D32f cornersA = new CvPoint2D32f(_maxCornerCount);
+		int[] cornerCount = {_maxCornerCount};
+		cvGoodFeaturesToTrack(
+				imgPrev,
+				imgEig,
+				imgTemp,
+				cornersA,
+				cornerCount,
+				0.10,
+				0.1,
+				null, 3, 0, 0.04
+				);
+		System.out.println("# of corners: " + cornerCount[0]);
+		//System.out.println(m.doubleArrayToString(cornersA.get()));
+
+		// Find subpixel corners
+		cvFindCornerSubPix(
+				imgPrev,
+				cornersA,
+				cornerCount[0],
+				_winSize,
+				cvSize(-1,-1),
+				cvTermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, .03)
+				);
+
+		// Optical Flow
+		CvSize _pyrSize = new CvSize(_size.width()+8, _size.height()/3+1);
+		CvPoint2D32f cornersB = new CvPoint2D32f(_maxCornerCount);
+		byte[] status = new byte[cornerCount[0]];
+		float[] featureErrors = new float[cornerCount[0]];
+
+		if(isPyrANeeded) imgPyrA = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
+		imgPyrB = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
+
+		cvCalcOpticalFlowPyrLK(
+				imgPrev,
+				imgCurr,
+				imgPyrA,
+				imgPyrB,
+				cornersA,
+				cornersB,
+				cornerCount[0],
+				_winSize,
+				5,
+				status,
+				featureErrors,
+				cvTermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, .3),
+				CV_LKFLOW_PYR_A_READY | CV_LKFLOW_INITIAL_GUESSES
+				);
+		System.out.println("CornerB: " + cornersB.get().length);
+		System.out.println(doubleArrayToString(cornersB.get()));
+
+		// Show what we are looking at
+		float errorCriteria = 500.0f;
+		List<Vector> successAPointsL = new ArrayList<Vector>();		// Prev
+		List<Vector> successBPointsL = new ArrayList<Vector>();		// Curr
+
+		for (int i=0; i<cornerCount[0]; i++) {
+			double p0x = cornersA.get()[2*i];
+			double p0y = cornersA.get()[2*i+1];
+			double p1x = cornersB.get()[2*i];
+			double p1y = cornersB.get()[2*i+1];
+			CvPoint p0 = new CvPoint((int)p0x, (int)p0y);
+			CvPoint p1 = new CvPoint((int)p1x, (int)p1y);
+
+			System.out.print("Status of " + (i+1) + " [" + p0.x() + "," + p0.y() + "]	: " + status[i]);
+
+			if (status[i]==0) { 
+				System.out.println("	<<< Error -- Zero status");
+				continue;
+			} else if (featureErrors[i] > errorCriteria) {
+				System.out.println("	<<< Error -- Too long error (" + featureErrors[i] + ", criteria:" + errorCriteria + ")");
+				continue;
+			} else { // Passed the test!
+				System.out.println();
+				successAPointsL.add(new Vector(p0x, p0y));
+				successBPointsL.add(new Vector(p1x, p1y));
+			}							
+			cvLine(imgResult, p0, p1, CV_RGB(0, 255, 0), 2, 0, 0);
+		}
+
+		/// Calculation
+		double[] shift = new double[2];
+		try {
+			shift = findBgMovement(successAPointsL, successBPointsL);
+			assert (successAPointsL.size() == successBPointsL.size()): "success points list size error";	
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return shift;
+	}
+
+	/**
+	 * 
+	 * @param APoints	Successfully tracked points in prev frame
+	 * @param BPoints	Successfully tracked points in curr frame
+	 * @return double[] {xshift, yshift}
+	 */
+	public double[] findBgMovement(List<Vector> APoints, List<Vector> BPoints) throws Exception {
 		int flowsCount = APoints.size();
 		if (flowsCount != BPoints.size()) throw new Exception("Two Points vector lists have different size -- somthing went wrong");
 		System.out.println("Successful: " + flowsCount);
-		
+
 		List<Vector> flows = new ArrayList<Vector>();
 		for(int i=0; i<APoints.size(); i++) {
 			Vector APoint = APoints.get(i);
@@ -315,7 +348,10 @@ public class Main_OpticalFlow {
 			backgroundBPoints.add(BPoints.get(index));
 		}
 		
-		findThetaDistance(backgroundAPoints, backgroundBPoints, backgroundFlows);
+		//findThetaDistance(backgroundAPoints, backgroundBPoints, backgroundFlows);
+		double xshift = probableDistance1 * Math.cos(probableTheta1);
+		double yshift = probableDistance1 * Math.sin(probableTheta1);
+		return new double[] {xshift, yshift};
 	}
 	
 	/**
