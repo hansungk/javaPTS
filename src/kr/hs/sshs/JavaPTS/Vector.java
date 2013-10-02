@@ -17,7 +17,7 @@ public class Vector {
 		return this.x;
 	}
 	public double y() {
-		return this.x;
+		return this.y;
 	}
 	public void x(double x) {
 		this.x = x;
