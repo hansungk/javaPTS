@@ -5,8 +5,11 @@
 *.war
 *.ear
 /video
-*.classpath
 
 # Log Files #
 *.log
-/bin
+bin/
+
+# Eclipse generated files #
+.classpath
+settings/
