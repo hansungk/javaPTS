@@ -45,7 +45,7 @@ public class SatChangeDetect {
 		
 		for(int x=0; x<width; x++){
 			for(int y=0; y<height; y++){
-				if((mX>0 && x<mX) || (mY>0 && y<mY) || (mX<0 && x>=_size.width()+mX) || (mY<0 && y>=_size.height()+mY)) {
+				if((mX>0 && x<mX) || (mY>0 && y<mY) || (mX<0 && x>width+mX) || (mY<0 && y>=height+mY)) {
 					v_subst[x][y]=0;
 				}
 				else{
