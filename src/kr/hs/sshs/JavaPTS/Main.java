@@ -49,6 +49,7 @@ public class Main {
 	IplImage imgSobel; //Sobel Image
 	IplImage imgCropped;
 	IplImage imgTemp;
+	IplImage imgPyr;
 	//IplImage imgMorph;
 	//IplImage imgMorphSobel;
 
@@ -66,6 +67,7 @@ public class Main {
 
 	/// Indicates whether a candidate is found
 	static boolean balldetermined = false;
+	static boolean isPyrNeeded = true;
 
 	/// HSV colorspace threshold
 	static CvScalar min = cvScalar(0, 0, 180, 0);
@@ -132,6 +134,7 @@ public class Main {
 
 		m.imgCandidate = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		m.imgSobel = cvCreateImage(_size, IPL_DEPTH_8U,1);
+		m.imgPyr = cvCreateImage(_size,IPL_DEPTH_8U,1);
 		//m.imgMorphSobel = cvCreateImage(_size, IPL_DEPTH_8U,1);
 		//m.imgCropped = cvCreateImage(_size, IPL_DEPTH_8U,1);
 		//m.imgMorph = cvCreateImage(_size,IPL_DEPTH_8U,1);
@@ -333,7 +336,10 @@ public class Main {
 			binary = scd.detectChange();
 		break;
 		case 'd' :
-			cvSaveImage("sample.jpg",imgSobel);
+			Main_OpticalFlow flow = new Main_OpticalFlow();
+			SatChangeDetect.mX=(int) flow.processOpticalFlow(imgTmpl_prev, imgTmpl, imgPyr, isPyrNeeded)[0];
+			SatChangeDetect.mY=(int) flow.processOpticalFlow(imgTmpl_prev, imgTmpl, imgPyr, isPyrNeeded)[1];
+			isPyrNeeded = true;
 			/// DETECTING VALUE CHANGE
 			scd = new SatChangeDetect();
 			scd.initialize(imgTmpl_prev, imgTmpl);

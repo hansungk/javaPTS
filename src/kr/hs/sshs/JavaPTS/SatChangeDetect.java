@@ -70,7 +70,9 @@ public class SatChangeDetect {
 		}
 		
 		cvReleaseImage(prev);
+		cvReleaseImage(prev_rgb);
 		cvReleaseImage(next);
+		cvReleaseImage(next_rgb);
 		return detect;
 	}
 	
