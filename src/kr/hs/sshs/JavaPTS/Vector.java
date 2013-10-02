@@ -26,13 +26,11 @@ public class Vector {
 		this.y = y;
 	}
 	
-	public void add(Vector v_add) {
-		x = x + v_add.x();
-		y = y + v_add.y();
+	public Vector add(Vector v_add) {
+		return new Vector(x + v_add.x(), y + v_add.y());
 	}
-	public void sub(Vector v_sub) {
-		x = x - v_sub.x();
-		y = y - v_sub.y();
+	public Vector sub(Vector v_sub) {
+		return new Vector(x - v_sub.x(), y - v_sub.y());
 	}
 	public static Vector add(Vector v1, Vector v2){
 		return new Vector(v1.x() + v2.x(), v1.y() + v2.y());
