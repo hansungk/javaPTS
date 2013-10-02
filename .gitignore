@@ -13,3 +13,6 @@ bin/
 # Eclipse generated files #
 .classpath
 settings/
+
+# Editor generated files #
+*.swp
