@@ -49,7 +49,7 @@ public class Main_OpticalFlow {
 		
 		canvas1 = new CanvasFrame("original", CV_WINDOW_AUTOSIZE);
 		canvas2 = new CanvasFrame("result", CV_WINDOW_AUTOSIZE);
-		canvas3 = new CanvasFrame("result", CV_WINDOW_AUTOSIZE);
+		canvas3 = new CanvasFrame("opticalflow", CV_WINDOW_AUTOSIZE);
 		canvas1.showImage(m.imgPrev);
 		canvas2.showImage(m.imgCurr);
 
@@ -57,7 +57,7 @@ public class Main_OpticalFlow {
 			// cvGoodFeaturesToTrack
 			m.imgEig = cvCreateImage(_size, IPL_DEPTH_32F, 1);
 			m.imgTemp = cvCreateImage(_size, IPL_DEPTH_32F, 1);
-			final int _maxCornerCount = 100;
+			final int _maxCornerCount = 1000;
 			CvPoint2D32f cornersA = new CvPoint2D32f(_maxCornerCount);
 			int[] cornerCount = {_maxCornerCount};
 			cvGoodFeaturesToTrack(
@@ -111,7 +111,9 @@ public class Main_OpticalFlow {
 			System.out.println(m.doubleArrayToString(cornersB.get()));
 			// Show what we are looking at
 			float errorCriteria = 500.0f;
-			List<double[]> successFlowsL = new ArrayList<double[]>();
+			List<Vector> successAPointsL = new ArrayList<Vector>();		// Prev
+			List<Vector> successBPointsL = new ArrayList<Vector>();		// Curr
+			
 			for (int i=0; i<cornerCount[0]; i++) {
 				double p0x = cornersA.get()[2*i];
 				double p0y = cornersA.get()[2*i+1];
@@ -130,15 +132,19 @@ public class Main_OpticalFlow {
 					continue;
 				} else { // Passed the test!
 					System.out.println();
-					successFlowsL.add(new double[] {p1x-p0x, p1y-p0y});
+					successAPointsL.add(new Vector(p0x, p0y));
+					successBPointsL.add(new Vector(p1x, p1y));
 				}							
 				cvLine(m.imgResult, p0, p1, CV_RGB(0, 255, 0), 2, 0, 0);
 			}
-			double[][] successFlows = new double[successFlowsL.size()][2];
-			successFlowsL.toArray(successFlows);
+			assert (successAPointsL.size() == successBPointsL.size()): "success points list size error";	
 			
 			/// Calculation
-			findBgMovement(successFlows);
+			try {
+				findBgMovement(successAPointsL, successBPointsL);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 			///
 			
 			canvas3.showImage(m.imgResult);
@@ -146,7 +152,7 @@ public class Main_OpticalFlow {
 
 			KeyEvent key = canvas1.waitKey(0);
 			if (key != null) {
-				if (key.getKeyChar() == 27) {
+				if (key.getKeyChar() == 27 || true) {
 					break;
 				}
 			}
@@ -164,28 +170,29 @@ public class Main_OpticalFlow {
 		System.out.println("[TERMINATED]");
 	}
 	
-	public static void findBgMovement(double[][] flows) throws FileNotFoundException, UnsupportedEncodingException {
-		int flowsCount = flows.length;
+	public static void findBgMovement(List<Vector> APoints, List<Vector> BPoints) throws Exception {
+		int flowsCount = APoints.size();
+		if (flowsCount != BPoints.size()) throw new Exception("Two Points vector lists have different size -- somthing went wrong");
 		System.out.println("Successful: " + flowsCount);
 		
-		/// Theta
-		
-		PrintWriter writer = new PrintWriter(PATH+"theta.txt", "cp949");
-		ArrayList<Double> thetas = new ArrayList<Double>();
-		for(int i=0; i<flowsCount; i++) {
-			double theta = Math.atan2(flows[i][1], flows[i][0]);
-			thetas.add(theta);
-			writer.println(theta / Math.PI * 180.0);	// Remember that Y-axis is flipped!!!
+		List<Vector> flows = new ArrayList<Vector>();
+		for(int i=0; i<APoints.size(); i++) {
+			Vector APoint = APoints.get(i);
+			Vector BPoint = BPoints.get(i);
+			flows.add(Vector.sub(BPoint, APoint));
 		}
-		writer.close();
+		
+		///
+		/// Calculation
+		///
 		// Find min and max
 		double mintheta = 2*Math.PI;
 		double maxtheta = 0;
 		double mindistance = 2 * Math.PI;
 		double maxdistance = 0;
-		for (double[] d : flows) {
-			double theta = Math.atan2(d[1], d[0]);
-			double distance = Math.sqrt(d[0]*d[0] + d[1]*d[1]);
+		for (Vector v : flows) {
+			double theta = Math.atan2(v.y(), v.x());
+			double distance = Math.sqrt(v.x()*v.x() + v.y()*v.y());
 			if (theta < mintheta) mintheta = theta;
 			if (theta > maxtheta) maxtheta = theta;
 			if (distance < mindistance) mindistance = distance;
@@ -197,29 +204,29 @@ public class Main_OpticalFlow {
 		double distanceInterval = (maxdistance - mindistance) / 100.0;		// 'Soft' interval (based on interval counts)
 		
 		// 'Rooms' where vectors get sorted in
-		List<ArrayList<double[]>> thetaRooms = new ArrayList<ArrayList<double[]>>();	
-		List<ArrayList<double[]>> distanceRooms = new ArrayList<ArrayList<double[]>>();	
+		List<ArrayList<Vector>> thetaRooms = new ArrayList<ArrayList<Vector>>();	
+		List<ArrayList<Vector>> distanceRooms = new ArrayList<ArrayList<Vector>>();	
 		int thetaRoomsCount = (int)Math.floor((maxdistance-mindistance) / distanceInterval) + 1;
 		int distanceRoomsCount = (int)Math.floor((maxtheta-mintheta) / thetaInterval) + 1;
-		for(int i=0; i<thetaRoomsCount; i++) distanceRooms.add(new ArrayList<double[]>());	// Initialize
-		for(int i=0; i<distanceRoomsCount; i++) thetaRooms.add(new ArrayList<double[]>());	// Initialize
+		for(int i=0; i<thetaRoomsCount; i++) distanceRooms.add(new ArrayList<Vector>());	// Initialize
+		for(int i=0; i<distanceRoomsCount; i++) thetaRooms.add(new ArrayList<Vector>());	// Initialize
 		// Sort and add vectors
-		for (double[] d : flows) {
-			double theta = Math.atan2(d[1], d[0]);
-			double distance = Math.sqrt(d[0]*d[0] + d[1]*d[1]);
+		for (Vector v : flows) {
+			double theta = Math.atan2(v.y(), v.x());
+			double distance = Math.sqrt(v.x()*v.x() + v.y()*v.y());
 			int indexTheta = (int)Math.floor((theta - mintheta) / thetaInterval);	// from 0
 			int indexDistance = (int)Math.floor((distance - mindistance) / distanceInterval);	// from 0
-			thetaRooms.get(indexTheta).add(d);
-			distanceRooms.get(indexDistance).add(d);
+			thetaRooms.get(indexTheta).add(v);
+			distanceRooms.get(indexDistance).add(v);
 		}
 		
 		// Now let's find the most 'populated' rooms
-		ArrayList<double[]> biggestTRoom1 = null, biggestTRoom2 = null;
-		ArrayList<double[]> biggestDRoom1 = null, biggestDRoom2 = null;
+		ArrayList<Vector> biggestTRoom1 = null, biggestTRoom2 = null;
+		ArrayList<Vector> biggestDRoom1 = null, biggestDRoom2 = null;
 		int biggestTRoomSize1=0, biggestTRoomSize2=0;
 		int biggestDRoomSize1=0, biggestDRoomSize2=0;
 		double tSum1=0, tSum2=0, dSum1=0, dSum2=0;
-		for(ArrayList<double[]> al : thetaRooms) {
+		for(ArrayList<Vector> al : thetaRooms) {
 			int roomSize = al.size();
 			if (biggestTRoomSize1 < roomSize) {
 				biggestTRoom1 = al;
@@ -230,7 +237,7 @@ public class Main_OpticalFlow {
 				biggestTRoomSize2 = roomSize;
 			}
 		}
-		for(ArrayList<double[]> al : distanceRooms) {
+		for(ArrayList<Vector> al : distanceRooms) {
 			int roomSize = al.size();
 			if (biggestDRoomSize1 < roomSize) {
 				biggestDRoom1 = al;
@@ -241,21 +248,21 @@ public class Main_OpticalFlow {
 				biggestDRoomSize2 = roomSize;
 			}
 		}
-		// Calcualte average
-		for (double[] d : biggestTRoom1) {
-			double theta = Math.atan2(d[1], d[0]);
+		// Calculate average
+		for (Vector v : biggestTRoom1) {
+			double theta = Math.atan2(v.y(), v.x());
 			tSum1 += theta;
 		}
-		for (double[] d : biggestTRoom2) {
-			double theta = Math.atan2(d[1], d[0]);
+		for (Vector v : biggestTRoom2) {
+			double theta = Math.atan2(v.y(), v.x());
 			tSum2 += theta;
 		}
-		for (double[] d : biggestDRoom1) {
-			double distance = Math.sqrt(d[0]*d[0] + d[1]*d[1]);
+		for (Vector v : biggestDRoom1) {
+			double distance = Math.sqrt(v.x()*v.x() + v.y()*v.y());
 			dSum1 += distance;
 		}
-		for (double[] d : biggestDRoom2) {
-			double distance = Math.sqrt(d[0]*d[0] + d[1]*d[1]);
+		for (Vector v : biggestDRoom2) {
+			double distance = Math.sqrt(v.x()*v.x() + v.y()*v.y());
 			dSum2 += distance;
 		}
 		double probableTheta1 = tSum1 / biggestTRoomSize1;
@@ -281,7 +288,7 @@ public class Main_OpticalFlow {
 		System.out.println();
 		
 		// Tiny file writes
-		writer = new PrintWriter(PATH+"result.txt", "cp949");
+		PrintWriter writer = new PrintWriter(PATH+"result.txt", "cp949");
 		writer.println("Distance: " + probableDistance1);
 		writer.println("Theta   : " + probableTheta1);
 		writer.close();
@@ -290,7 +297,15 @@ public class Main_OpticalFlow {
 	/**
 	 * Solve Least Square Problem and find the 'most appropriate' vector.
 	 */
-	public void findThetaDistance() {
+	public void findThetaDistance(ArrayList<double[]> pflows) {
+		// Subtract 1 vector from other vectors -> Rotation
+		double[] standard = pflows.get(0); // Standard flow vector to subtract
+		ArrayList<double[]> deltaflows = new ArrayList<double[]>();
+		for (int i=0; i<pflows.size(); i++) {
+			double[] pflow = pflows.get(i);
+			deltaflows.add(new double[] {pflow[0]-standard[0], pflow[1]-standard[1]});
+		}
+		
 		
 	}
 	
