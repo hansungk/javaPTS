@@ -87,7 +87,7 @@ public class Candidate {
 
 		// Assume ball is flying in straight line with const speed
 		CvPoint cp = new CvPoint(currentCenter.x() + x_shift, currentCenter.y() + y_shift);
-		Simple toAdd = new Simple(cp, 10);
+		Simple toAdd = new Simple(cp, 10); // Why 10?????????????
 		add(toAdd); // auto-updated
 		
 		//disturbed++;
@@ -144,7 +144,10 @@ public class Candidate {
 			return nextCenter.x() + x_ROIWidth/2;
 	}
 	public int yROImin() {
+		if(this.centers.size()<9)
 			return (int) (nextCenter.y() - y_ROIWidth*1.8);
+		else
+			return (currentCenter.y() -1); //공이 잡힌 이후에는 올라가는 일은 없다고 가정
 	}
 	public int yROImax() {
 			return (int) (nextCenter.y() + y_ROIWidth*2.4);

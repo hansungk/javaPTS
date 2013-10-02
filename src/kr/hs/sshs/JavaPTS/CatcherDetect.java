@@ -7,6 +7,7 @@ import static com.googlecode.javacv.cpp.opencv_highgui.*;
 import java.util.List;
 import java.util.ArrayList;
 
+import com.googlecode.javacv.cpp.opencv_core.CvScalar;
 import com.googlecode.javacv.cpp.opencv_core.CvSize;
 
 public class CatcherDetect {
@@ -14,10 +15,10 @@ public class CatcherDetect {
 	final static int rW=30, rH=40;
 	static int[][] roi = new int[rW][rH];
 	
-	public static IplImage main(IplImage bw) {
+	public static void main(IplImage bw) {
 		
 		int pX=0,pY=0;
-		
+		int lMax=0, rMax=0, hMax=0;
 
 		int lEnd[] = new int[rH];
 		int rEnd[] = new int[rH];
@@ -57,9 +58,8 @@ public class CatcherDetect {
 			//initiate condition
 			if(bin[pX+rW/2][pY]==0||(pY>0 && bin[pX+rW/2][pY-1]==1)) { continue;}
 			else {lEnd[0]=rW/2; rEnd[0]=rW/2;}
-			
-			System.out.println();
-			System.out.println("pivot : ("+pX+","+pY+")" );
+
+			//System.out.println("pivot : ("+pX+","+pY+")" );
 			
 			//movingg ROI data
 			for(int i = pX; i < pX+rW; i++){
@@ -71,15 +71,23 @@ public class CatcherDetect {
 			//temp variable
 			int k;
 			
-			//finding first ends
-			for(k = rW/2-1; k!=-1 && roi[k][0]==1; k--){}
-			lEnd[0]=k+1;
-			for(k = rW/2+1; k!=rW && roi[k][0]==1; k++){}
-			rEnd[0]=k-1;
+			//finding ends of the first line
+			k = rW/2-1;
+			for(int num=0; k!=-1; k--){
+				if(roi[k][0]==0) {num++; continue;}
+				if(num>=2) break;
+				lEnd[0]=k;
+			}
+			k = rW/2+1;
+			for(int num=0; k!=rW; k++){
+				if(roi[k][0]==0) {num++; continue;}
+				if(num>=2) break;
+				rEnd[0]=k;
+			}
 			
 			//don't regard as head if too long
 			if(lEnd[0] < rW/2-5 || rEnd[0]>rW/2+5){
-				System.out.println("toolong");
+				//System.out.println("toolong");
 				continue;
 			}
 			
@@ -104,7 +112,7 @@ public class CatcherDetect {
 				//too much missing upper line -> notCatcher
 				if(m<=k-4){
 					notCatcher=true;
-					System.out.println("cut");
+					//System.out.println("cut");
 					break;
 				}
 				
@@ -129,7 +137,7 @@ public class CatcherDetect {
 				//too much missing upper line -> notCatcher
 				if(m<=k-4){
 					notCatcher=true;
-					System.out.println("cut");
+					//System.out.println("cut");
 					break;
 				}
 				
@@ -146,7 +154,11 @@ public class CatcherDetect {
 			}
 			
 			//if too short in vertical
-			if(notCatcher && k<2*rH/3) {System.out.println("not long enough"); continue;}
+			if(notCatcher && k<2*rH/3) {
+				//System.out.println("not long enough");
+				continue;
+			}
+			hMax = k;
 			
 			k=rH/2;
 			int n=rH/2;
@@ -155,12 +167,12 @@ public class CatcherDetect {
 			
 			//not good shape
 			if(lEnd[0]<lEnd[k]+3 || rEnd[0]>rEnd[n]-3) {
-				System.out.println("shape not catcher");
+				//System.out.println("shape not catcher");
 				continue;
 			}
 			
-			if(rEnd[n]-lEnd[k]<10) {
-				System.out.println("shape not catcher");
+			if(rEnd[n]-lEnd[k]<12) {
+				//System.out.println("shape not catcher");
 				continue;
 			}
 			
@@ -168,19 +180,19 @@ public class CatcherDetect {
 			for(int i = 0; i<rH; i++){
 				if(lEnd[i]!=-1){
 					cvSetReal2D(marked,i+pY,lEnd[i]+pX,120);
+					if(lMax>lEnd[i]) lMax=lEnd[i];
 					//if(cvGetReal2D(bw,i+pY,lEnd[i]+pX)<50) System.out.println("("+lEnd[i]+pX+","+i+pY+")");
 				}
 				if(rEnd[i]!=-1){
 					cvSetReal2D(marked,i+pY,rEnd[i]+pX,120);
+					if(rMax<rEnd[i]) rMax=rEnd[i];
 					//if(cvGetReal2D(bw,i+pY,rEnd[i]+pX)<50) System.out.println("("+(rEnd[i]+pX)+","+(i+pY)+")");
 				}
 			}
 			//}
-		
+		cvRectangle(bw,new CvPoint(pX+lMax,pY),new CvPoint(pX+rMax,pY+hMax),new CvScalar(180,180,180,0),1,8,0);
 			
 		}
-	
-	return marked;
 		
 	}
 	

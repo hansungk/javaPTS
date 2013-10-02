@@ -55,8 +55,6 @@ public class Blob_Labeling {
 	public static int nmin(int a, int b) { 
 		if(a==0)
 			return b;
-		if(b==0)
-			return a;
 		if(a<=b)
 			return a;
 		else
@@ -173,7 +171,7 @@ public class Blob_Labeling {
 		}
 		
 		// Stamping
-		for(;w<points.size();w++) {
+		for(w=1;w<points.size();w++) {
 			for(int k=0;k<points.get(w).size();k++){
 				print[points.get(w).get(k).x()][points.get(w).get(k).y()]=w;
 			}
