@@ -57,7 +57,7 @@ public class Main_OpticalFlow {
 			// cvGoodFeaturesToTrack
 			m.imgEig = cvCreateImage(_size, IPL_DEPTH_32F, 1);
 			m.imgTemp = cvCreateImage(_size, IPL_DEPTH_32F, 1);
-			final int _maxCornerCount = 100;
+			final int _maxCornerCount = 600;
 			CvPoint2D32f cornersA = new CvPoint2D32f(_maxCornerCount);
 			int[] cornerCount = {_maxCornerCount};
 			cvGoodFeaturesToTrack(
@@ -305,7 +305,7 @@ public class Main_OpticalFlow {
 		writer.println("Theta   : " + probableTheta1);
 		writer.close();
 		
-		List<Vector> backgroundFlows = biggestTRoom1;
+		List<Vector> backgroundFlows = biggestDRoom1;
 		List<Vector> backgroundAPoints = new ArrayList<Vector>();
 		List<Vector> backgroundBPoints = new ArrayList<Vector>();
 		for(int i=0; i<backgroundFlows.size(); i++) {
@@ -384,7 +384,9 @@ public class Main_OpticalFlow {
 		double p2 = si21*r1 + si22*r2;	// ~ sinT
 		
 		System.out.println("cosT ~ "+p1);
-		System.out.println("sinT ~ "+p2);
+		System.out.println("sinT ~ "+-1*p2);
+		System.out.println("c^2+s^2= " + (p1*p1 + p2*p2));
+		System.out.println("Accuracy= " + ((p1*p1 + p2*p2)-1)*100);
 		
 		// Now get p and q
 		
