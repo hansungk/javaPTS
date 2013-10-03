@@ -12,7 +12,7 @@ import com.googlecode.javacv.cpp.opencv_core.CvSize;
 
 public class CatcherDetect {
 	
-	final static int rW=30, rH=40;
+	final static int rW=30, rH=36;
 	static int[][] roi = new int[rW][rH];
 	
 	public static void main(IplImage bw) {
@@ -48,7 +48,7 @@ public class CatcherDetect {
 		
 		for(;;pX++){
 			
-			//moving pivot
+			//moving pivot((0,0) point of the ROI))
 			if(pX==_size.width()-rW+1){
 				pX=0;
 				pY++;
@@ -68,7 +68,7 @@ public class CatcherDetect {
 				}
 			}
 			
-			//temp variable
+			//temporary variable used for many purposes
 			int k;
 			
 			//finding ends of the first line
@@ -77,12 +77,14 @@ public class CatcherDetect {
 				if(roi[k][0]==0) {num++; continue;}
 				if(num>=2) break;
 				lEnd[0]=k;
+				lMax=k;
 			}
 			k = rW/2+1;
 			for(int num=0; k!=rW; k++){
 				if(roi[k][0]==0) {num++; continue;}
 				if(num>=2) break;
 				rEnd[0]=k;
+				rMax=k;
 			}
 			
 			//don't regard as head if too long
@@ -160,8 +162,8 @@ public class CatcherDetect {
 			}
 			hMax = k;
 			
-			k=rH/2;
-			int n=rH/2;
+			k=rH/3;
+			int n=rH/3;
 			while(lEnd[k]==-1){k++; if(k==rH) {k--; break;}}
 			while(rEnd[n]==-1){n++; if(n==rH) {n--; break;}}
 			
@@ -177,7 +179,7 @@ public class CatcherDetect {
 			}
 			
 			//if(pX==1 && pY==0){
-			for(int i = 0; i<rH; i++){
+			for(int i = 1; i<Math.max(k, n); i++){
 				if(lEnd[i]!=-1){
 					cvSetReal2D(marked,i+pY,lEnd[i]+pX,120);
 					if(lMax>lEnd[i]) lMax=lEnd[i];

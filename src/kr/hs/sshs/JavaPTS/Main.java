@@ -42,6 +42,7 @@ public class Main {
 	IplImage imgTmpl_prev;	// template image - 1 frame ago
 	IplImage imgHSV;	// template image (HSV)
 	IplImage imgBW;		// template blackwhite image
+	IplImage imgBW_prev;
 	IplImage imgBlob;	// Blob detection image
 	IplImage imgCandidate;	// Candidate image
 	IplImage imgResult;	// result image
@@ -49,6 +50,7 @@ public class Main {
 	IplImage imgSobel; //Sobel Image
 	IplImage imgCropped;
 	IplImage imgTemp;
+	IplImage imgPyr;
 	//IplImage imgMorph;
 	//IplImage imgMorphSobel;
 
@@ -66,6 +68,7 @@ public class Main {
 
 	/// Indicates whether a candidate is found
 	static boolean balldetermined = false;
+	static boolean isPyrNeeded = true;
 
 	/// HSV colorspace threshold
 	static CvScalar min = cvScalar(0, 0, 180, 0);
@@ -116,7 +119,7 @@ public class Main {
 		recorder = new FFmpegFrameRecorder(PATH + "video/trash.mp4", 640, 480);
 		recorder.setFrameRate(30);
 		recorder.start();
-		grabber = new FFmpegFrameGrabber(PATH + "video/corner.mp4");
+		grabber = new FFmpegFrameGrabber(PATH + "video/fort2.mp4");
 		grabber.start();
 
 		// Get frame size
@@ -127,11 +130,13 @@ public class Main {
 		// Initialize IplImages
 		// (DO NOT RELEASE THESE --- intialized only 1 time, reused)
 		m.imgTmpl_prev = cvCreateImage(_size, IPL_DEPTH_8U, 3);
+		m.imgBW_prev = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		m.imgBall = cvCreateImage(_size,IPL_DEPTH_8U,1);
 		cvCopy(grab(), m.imgTmpl_prev);
 
 		m.imgCandidate = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		m.imgSobel = cvCreateImage(_size, IPL_DEPTH_8U,1);
+		m.imgPyr = cvCreateImage(_size,IPL_DEPTH_32F,1);
 		//m.imgMorphSobel = cvCreateImage(_size, IPL_DEPTH_8U,1);
 		//m.imgCropped = cvCreateImage(_size, IPL_DEPTH_8U,1);
 		//m.imgMorph = cvCreateImage(_size,IPL_DEPTH_8U,1);
@@ -159,6 +164,7 @@ public class Main {
 			CatcherDetect.main(m.imgCropped);
 			
 			cvCopy(m.imgTmpl, m.imgTmpl_prev);
+			cvCopy(m.imgBW, m.imgBW_prev);
 
 			canvas2.showImage(m.imgBW);
 			canvas3.showImage(m.imgBall);
@@ -226,7 +232,7 @@ public class Main {
 		//canvas7.dispose();
 		//canvas8.dispose();
 		canvas9.dispose();
-
+		
 		System.out.println("(TERMINATED)");
 	}
 
@@ -322,6 +328,8 @@ public class Main {
 		//cvSmooth(imgBW, imgBW, CV_GAUSSIAN, 7);
 		cvCanny(imgBW,imgSobel,80,200,3);
 		//cvCanny(imgMorph,imgMorphSobel,80,200,3);
+		
+		
 
 		switch (flag_BW) {
 		case 'c' :
@@ -331,9 +339,17 @@ public class Main {
 			binary = scd.detectChange();
 		break;
 		case 'd' :
-			cvSaveImage("sample.jpg",imgSobel);
-			/// DETECTING VALUE CHANGE
+			Main_OpticalFlow flow = new Main_OpticalFlow();
+			
 			scd = new SatChangeDetect();
+			
+			
+			double[] shift = flow.processOpticalFlow(imgBW_prev, imgBW, imgPyr, isPyrNeeded);
+			SatChangeDetect.mX=(int)Math.round(shift[0]);
+			SatChangeDetect.mY=(int)Math.round(shift[1]);
+			System.out.println(SatChangeDetect.mX + " and " + SatChangeDetect.mY);
+			isPyrNeeded = false;
+			/// DETECTING VALUE CHANGE
 			scd.initialize(imgTmpl_prev, imgTmpl);
 			binary = scd.detectChange();
 			
@@ -380,7 +396,7 @@ public class Main {
 			///
 			/// BLOB FILTERING
 			if(!balldetermined)
-				blobFiltering(blobs, 4);
+				blobFiltering(blobs, 3);
 			///
 			///
 
@@ -692,11 +708,11 @@ public class Main {
 			double angmove = Math.abs(Math.atan2(lastymove,lastxmove)-Math.atan2(prevymove,prevxmove));
 			if(angmove>Math.PI)
 				angmove=2*Math.PI-angmove;
-			if(Math.atan2(prevymove,prevxmove)>Math.PI /*&& cd.disturbed==0*/){
-				if(angmove>Math.PI/3){
+			//if(Math.atan2(prevymove,prevxmove)>Math.PI /*&& cd.disturbed==0*/){
+				if(angmove>Math.PI/6){
 					caught = true;
 				System.out.println("ang");}
-			}
+			//}
 			if(!caught /*&& cd.disturbed==0*/){
 				if (prevxmove * lastxmove < 0) {
 					if (Math.abs(lastxmove) > Math.abs(prevxmove)) {

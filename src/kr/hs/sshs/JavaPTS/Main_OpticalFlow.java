@@ -62,8 +62,8 @@ public class Main_OpticalFlow {
 			cvSaveImage(PATH+"opticalflow.jpg", m.imgResult);
 
 			/// Process optical flow and find the background movement vector
-			IplImage imgPyrA = null, imgPyrB = null;	//TODO 광민 여긴 너가 알아서해
-			m.processOpticalFlow(m.imgPrev, m.imgCurr, imgPyrA, imgPyrB, false);
+			IplImage imgPyrA = null;	//TODO 愿묐� �ш릿 �덇� �뚯븘�쒗빐
+			m.processOpticalFlow(m.imgPrev, m.imgCurr, imgPyrA, false);
 
 			KeyEvent key = canvas1.waitKey(0);
 			if (key != null) {
@@ -95,9 +95,10 @@ public class Main_OpticalFlow {
 	 * 						false: will cvCreateImage a new one
 	 * @return double[] {xshift, yshift}
 	 */
-	public double[] processOpticalFlow(IplImage imgPrev, IplImage imgCurr, IplImage imgPyrA, IplImage imgPyrB, boolean isPyrANeeded) {
+	public double[] processOpticalFlow(IplImage imgPrev, IplImage imgCurr, IplImage imgPyrA, boolean isPyrANeeded) {
 		CvSize _winSize = new CvSize(10,10);
 
+		_size=cvGetSize(imgPrev);
 		// Find good features to track
 		IplImage imgEig = cvCreateImage(_size, IPL_DEPTH_32F, 1);
 		IplImage imgTemp = cvCreateImage(_size, IPL_DEPTH_32F, 1);
@@ -137,7 +138,7 @@ public class Main_OpticalFlow {
 		float[] featureErrors = new float[cornerCount[0]];
 
 		if(isPyrANeeded) imgPyrA = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
-		imgPyrB = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
+		IplImage imgPyrB = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
 
 		cvCalcOpticalFlowPyrLK(
 				imgPrev,
@@ -170,7 +171,7 @@ public class Main_OpticalFlow {
 			CvPoint p0 = new CvPoint((int)p0x, (int)p0y);
 			CvPoint p1 = new CvPoint((int)p1x, (int)p1y);
 
-			System.out.print("Status of " + (i+1) + " [" + p0.x() + "," + p0.y() + "]	: " + status[i]);
+			//System.out.print("Status of " + (i+1) + " [" + p0.x() + "," + p0.y() + "]	: " + status[i]);
 
 			if (status[i]==0) { 
 				System.out.println("	<<< Error -- Zero status");
@@ -237,7 +238,7 @@ public class Main_OpticalFlow {
 			if (distance < mindistance) mindistance = distance;
 			if (distance > maxdistance) maxdistance = distance;
 		}
-		int roomsCount = 100;
+		int roomsCount = 1000;
 		//double thetaInterval = (Math.PI / 180 ) * 5.0;		// 'Hard' interval (based on absolute theta)
 		double thetaInterval = (maxtheta - mintheta) / roomsCount;		// 'Soft' interval (based on interval counts)
 		//double thetaInterval = (Math.PI / 180 ) * 5.0;		// 'Hard' interval (based on absolute theta)
@@ -258,7 +259,8 @@ public class Main_OpticalFlow {
 			double distance = v.length();
 			int indexTheta = (int)Math.floor((theta - mintheta) / thetaInterval);	// from 0
 			int indexDistance = (int)Math.floor((distance - mindistance) / distanceInterval);	// from 0
-			if(indexDistance == roomsCount) indexDistance--; 
+			if(indexDistance == roomsCount) indexDistance--;
+			if(indexTheta == roomsCount) indexTheta--; 
 			thetaRooms.get(indexTheta).add(v);
 			distanceRooms.get(indexDistance).add(v);
 		}
@@ -316,7 +318,7 @@ public class Main_OpticalFlow {
 		double probableDistance2 = dSum2 / biggestDRoomSize2;
 
 		// Massive sysouts
-		System.out.println();
+		/*System.out.println();
 		System.out.println("Maxtheta: " + maxtheta);
 		System.out.println("Mintheta: " + mintheta);
 		System.out.println("1st probable theta count: " + biggestTRoomSize1);
@@ -330,7 +332,7 @@ public class Main_OpticalFlow {
 		System.out.println("2nd probable distance count: " + biggestDRoomSize2);
 		System.out.println("1st probable distance AVG: " + probableDistance1);
 		System.out.println("2nd probable distance AVG: " + probableDistance2);
-		System.out.println();
+		System.out.println();*/
 		
 		// Tiny file writes
 		PrintWriter writer = new PrintWriter(PATH+"result.txt", "cp949");
