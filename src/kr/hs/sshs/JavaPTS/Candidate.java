@@ -6,7 +6,7 @@ import java.util.List;
 import com.googlecode.javacv.cpp.opencv_core.CvPoint;
 
 public class Candidate {
-	
+	// Coordinates of ball center positions in this Candidate
 	public List<BallInfo> centers;
 
 	int numOfMissingBlobs = 0;
