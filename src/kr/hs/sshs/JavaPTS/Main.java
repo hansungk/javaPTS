@@ -82,18 +82,18 @@ public class Main {
 
 	/// Stores all Candidate objects
 	List<Candidate>	ballCandidates = new ArrayList<Candidate>();// candidate storage
-	Candidate		detectedball;
-	
+	Candidate		detectedball;	
 	static BallInfo	ballfinal = new BallInfo(new CvPoint(cropsize,cropsize));
 	static CvRect	ballcrop;
 	
 	/// Final and initial data of the thrown ball
 	IplImage		imgFinalCaught;
+	int				detectedCandidateSize;
 	CvPoint			caughtBallCtr;		// Center point of the finally caught ball
 	
 	// IplImages of the frame in which the ball starts to fly;
 	// will store probable imgFT2 and 3 at the same time by packing them into 3-element array
-	List<ArrayList<IplImage>>	imgFirstThrownWannabes;
+	List<IplImage>				imgFramesBetweenCatches;	// store all frames between ball catches
 	IplImage					imgFirstThrown;
 	IplImage					imgFirstThrown2;	// imgFirstThrown + 1 frame
 	IplImage					imgFirstThrown3;	// imgFirstThrown + 2 frames
@@ -174,13 +174,19 @@ public class Main {
 		
 		// Initialize variables used in decision
 		m.caughtBallCtr = new CvPoint(-1, -1);	// -1 means no ball was caught yet
-		m.imgFirstThrownWannabes = new ArrayList<ArrayList<IplImage>>();
+		m.imgFramesBetweenCatches = new ArrayList<IplImage>();
+		//m.imgFirstThrownWannabes = new ArrayList<ArrayList<IplImage>>();
 
 		while (true) {
 			cvCopy(grab(), m.imgTmpl);
 			cvSmooth(m.imgTmpl, m.imgTmpl, CV_GAUSSIAN, 3);
 			cvCvtColor(m.imgTmpl,m.imgBW,CV_RGB2GRAY);
 			
+			IplImage toAdd = cvCreateImage(_size, IPL_DEPTH_8U, 1);
+			cvCopy(m.imgBW, toAdd);
+			m.imgFramesBetweenCatches.add(toAdd);	// Don't forget to release them all later
+			
+			/*
 			// Add successive imgFirstThrown{2,3}s to the list
 			for (int i=0; i<m.imgFirstThrownWannabes.size(); i++) {
 				ArrayList<IplImage> ils = m.imgFirstThrownWannabes.get(i);
@@ -193,7 +199,7 @@ public class Main {
 					ils.add(toAdd);
 					//System.out.println("Size after adding: " + ils.size());
 				}
-			}
+			}*/
 			
 			// Process image!
 			m.process();
@@ -217,7 +223,8 @@ public class Main {
 			//canvas8.showImage(m.imgMorphSobel);
 			canvas9.showImage(m.imgTemp);
 			//canvas10.showImage(m.imgTemp2);
-			//canvas11.showImage(arg0);
+			canvas11.showImage(m.imgFirstThrown);
+			canvas12.showImage(m.imgFinalCaught);
 
 			System.out.println("############## FRAME " + framecount + " ##############");
 
@@ -283,6 +290,8 @@ public class Main {
 		//canvas8.dispose();
 		canvas9.dispose();
 		//canvas10.dispose();
+		canvas11.dispose();
+		canvas12.dispose();
 		
 		System.out.println("(TERMINATED)");
 	}
@@ -460,7 +469,6 @@ public class Main {
 							cc.numOfMissingBlobs = 0;
 							addedBlob = true;
 							ballCandidates.add(new Candidate(cc));
-							addFirstThrownFrame();
 							//System.out.println("THERE ARE " + ballCandidates.size() + " CANDIDATES");
 							ballCandidates.get(ballCandidates.size()-1).add(new BallInfo(new CvPoint(blob.xcenter(),blob.ycenter()),blob.count));
 						}
@@ -477,8 +485,9 @@ public class Main {
 								System.out.println("BALL WAS CAUGHT /nf");
 								//System.out.println("The Speed of Pitch is " + 1503/detectedball.centers.size() + "km/h");
 								ballfinal=detectedball.centers.get(detectedball.centers.size()-1); // last ball in the "elected" ball candidate
-
-								// A place where ball is finally caught (another is in ballJumpingCheck()
+								detectedCandidateSize = detectedball.centers.size();
+								
+								// Hookup of Strike-Ball
 								handleBallCaught();
 								
 								ValueChangeDetect.v_thresh=350;
@@ -491,7 +500,6 @@ public class Main {
 							// Do nothing, let this blob get removed (not added)
 							ballCandidates.add(new Candidate(cc)); // auto-updated
 							ballCandidates.get(ballCandidates.size()-1).addMissed();
-							addFirstThrownFrame();
 						}
 						
 					} else {
@@ -501,7 +509,6 @@ public class Main {
 				}
 
 				ballCandidates.remove(q); // Remove original Candidate
-				imgFirstThrownWannabes.remove(q);
 			}
 			
 			if(ballCandidates.size()==0){
@@ -518,9 +525,6 @@ public class Main {
 				for (int q = ballCandidates.size()-1; q>=0; q--) {
 					if(!ballCandidates.get(q).survive){
 						ballCandidates.remove(q);
-						
-						// Got to also remove imgFirstThrown wannabes in which candidate's survive is false
-						imgFirstThrownWannabes.remove(q);
 					}
 				}
 				
@@ -542,9 +546,6 @@ public class Main {
 					if (blob.count>=45) {
 						ballCandidates.add(new Candidate(blob)); //New Candidate
 						//System.out.println("NEW CANDIDATE WAS CREATED");
-						
-						// Could be the first ball of when ball is thrown
-						addFirstThrownFrame();
 					}
 				}
 			}
@@ -735,7 +736,6 @@ public class Main {
 				int ruler = Math.abs(cd.centers.get(frames-1).ctr.x()-cd.centers.get(frames-2).ctr.x());
 				if (Math.abs(cd.centers.get(0).ctr.x()-cd.centers.get(frames-1).ctr.x()) < (frames-1)*ruler*0.9) { //If Track of Candidate is not long enough along the x axis
 					ballCandidates.remove(i); //Delete the Candidate
-					imgFirstThrownWannabes.remove(i);
 					//System.out.println("SHORT CANDIDATE WAS REMOVED");
 				}
 			}
@@ -789,13 +789,13 @@ public class Main {
 					drawBall();
 					System.out.println("BALL WAS CAUGHT /j");
 					//System.out.println("The Speed of Pitch is " + 1080/detectedball.centers.size() + "km/h");
-					ballfinal=detectedball.centers.get(detectedball.centers.size()-1);				
+					ballfinal=detectedball.centers.get(detectedball.centers.size()-1);
+					detectedCandidateSize = detectedball.centers.size();
 					
 					/// Another place where ball is caught
 					handleBallCaught();
 					
 					ballCandidates.remove(0);
-					imgFirstThrownWannabes.remove(0);
 					ValueChangeDetect.v_thresh=350;
 					ValueChangeDetect.singlethresh=40;
 					balldetermined=false;
@@ -803,26 +803,19 @@ public class Main {
 				}
 				else {
 					ballCandidates.remove(i);
-					imgFirstThrownWannabes.remove(i);
 				}
 			}
 		}
 	}
 	
 	/**
-	 * Add probable first thrown frame, each time new ball is caught
+	 * Store probable first thrown frame, each time new ball is caught
 	 */
 	public void addFirstThrownFrame() {
-		ArrayList<IplImage> newWannabe = new ArrayList<IplImage>();
-		//imgFirstThrownWannabes.add(new ArrayList<IplImage>());
-		IplImage toAdd = cvCreateImage(_size, IPL_DEPTH_8U, 1);
-		cvCopy(imgBW, toAdd);
-		newWannabe.add(toAdd);
-		//imgFirstThrownWannabes.get(imgFirstThrownWannabes.size()-1).add(toAdd);
-		imgFirstThrownWannabes.add(newWannabe);
 	}
 	
 	public void handleBallCaught() {
+		/*
 		//imgFinalCaught = imgBW;
 		cvCopy(imgBW, imgFinalCaught);
 		caughtBallCtr = ballfinal.ctr;
@@ -834,6 +827,21 @@ public class Main {
 		cvCopy(imgFirstThrownWannabes.get(0).get(0), imgFirstThrown);
 		cvCopy(imgFirstThrownWannabes.get(0).get(1), imgFirstThrown2);
 		cvCopy(imgFirstThrownWannabes.get(0).get(2), imgFirstThrown3);
+		*/
+		// Store the last state of the ball
+		cvCopy(imgBW, imgFinalCaught);
+		caughtBallCtr = ballfinal.ctr;
+		// Find ball-thrown frame, "+1, "+2
+		int framesago = detectedCandidateSize+1;	// assume there was NOT a ball jumping at the end
+													// (therefore last ball caught was currframe-2
+		int thrownFrameIndex = (imgFramesBetweenCatches.size()-1) - framesago;
+		cvCopy(imgFramesBetweenCatches.get(thrownFrameIndex),imgFirstThrown);
+		cvCopy(imgFramesBetweenCatches.get(thrownFrameIndex+1),imgFirstThrown2);
+		cvCopy(imgFramesBetweenCatches.get(thrownFrameIndex+2),imgFirstThrown3);
+		
+		// Clear frames list
+		for (IplImage il : imgFramesBetweenCatches)	cvReleaseImage(il);
+		imgFramesBetweenCatches.clear();
 	}
 
 	/**
@@ -862,6 +870,10 @@ public class Main {
 		//cvReleaseImage(imgTemp2);
 		cvReleaseImage(imgPyrA);
 		cvReleaseImage(imgPyrB);
+		cvReleaseImage(imgFinalCaught);
+		cvReleaseImage(imgFirstThrown);
+		cvReleaseImage(imgFirstThrown2);
+		cvReleaseImage(imgFirstThrown3);
 	}
 	
 	public String doubleArrayToString(double[] ds) {
