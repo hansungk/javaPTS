@@ -119,7 +119,7 @@ public class Main {
 		recorder = new FFmpegFrameRecorder(PATH + "video/trash.mp4", 640, 480);
 		recorder.setFrameRate(30);
 		recorder.start();
-		grabber = new FFmpegFrameGrabber(PATH + "video/fort1.mp4");
+		grabber = new FFmpegFrameGrabber(PATH + "video/fort2.mp4");
 		grabber.start();
 
 		// Get frame size
