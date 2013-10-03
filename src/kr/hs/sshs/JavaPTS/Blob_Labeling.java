@@ -180,7 +180,7 @@ public class Blob_Labeling {
 			// count++;
 		}
 		
-		System.out.println("[Blob_Labelling.java] Blob size = " + blob.size());
+		//System.out.println("[Blob_Labelling.java] Blob size = " + blob.size());
 		//cvReleaseImage(org);
 		//cvReleaseImage(img);
 		return blob;

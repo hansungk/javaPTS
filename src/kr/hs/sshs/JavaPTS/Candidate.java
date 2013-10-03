@@ -95,7 +95,7 @@ public class Candidate {
 		// Re-update ROIWidths
 		//x_ROIWidth *= 2;
 		//y_ROIWidth *= 2;
-		System.out.println("I MISSED " + numOfMissingBlobs + " BLOBS SO FAR");
+		//System.out.println("I MISSED " + numOfMissingBlobs + " BLOBS SO FAR");
 		
 		// Leave ROI variables unchanged
 	}
@@ -133,7 +133,7 @@ public class Candidate {
 			nextCenter.y(currentCenter.y());
 			x_ROIWidth = 140;
 			y_ROIWidth = 30;
-			System.out.println("ONLY one ");
+			//System.out.println("ONLY one ");
 		}
 	}
 	
@@ -147,7 +147,7 @@ public class Candidate {
 		if(this.centers.size()<9)
 			return (int) (nextCenter.y() - y_ROIWidth*1.8);
 		else
-			return (currentCenter.y() -1); //°øÀÌ ÀâÈù ÀÌÈÄ¿¡´Â ¿Ã¶ó°¡´Â ÀÏÀº ¾ø´Ù°í °¡Á¤
+			return (currentCenter.y() -1); //ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ ï¿½Ã¶ó°¡´ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ù°ï¿½ ï¿½ï¿½ï¿½ï¿½
 	}
 	public int yROImax() {
 			return (int) (nextCenter.y() + y_ROIWidth*2.4);
