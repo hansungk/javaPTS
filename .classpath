@@ -10,5 +10,11 @@
 	<classpathentry kind="lib" path="lib/javacv-windows-x86_64.jar"/>
 	<classpathentry kind="lib" path="lib/javacv-windows-x86.jar"/>
 	<classpathentry kind="lib" path="lib/javacv.jar"/>
+	<classpathentry kind="lib" path="/home/stephen/project/eclipse/Java-Libraries/javacv-0.6-cppjars/javacv-cppjars/ffmpeg-2.0.1-android-arm.jar"/>
+	<classpathentry kind="lib" path="/home/stephen/project/eclipse/Java-Libraries/javacv-0.6-cppjars/javacv-cppjars/ffmpeg-2.0.1-linux-x86.jar"/>
+	<classpathentry kind="lib" path="/home/stephen/project/eclipse/Java-Libraries/javacv-0.6-cppjars/javacv-cppjars/ffmpeg-2.0.1-linux-x86_64.jar"/>
+	<classpathentry kind="lib" path="/home/stephen/project/eclipse/Java-Libraries/javacv-0.6-cppjars/javacv-cppjars/ffmpeg-2.0.1-macosx-x86_64.jar"/>
+	<classpathentry kind="lib" path="/home/stephen/project/eclipse/Java-Libraries/javacv-0.6-cppjars/javacv-cppjars/ffmpeg-20130915-git-7ac6c63-windows-x86.jar"/>
+	<classpathentry kind="lib" path="/home/stephen/project/eclipse/Java-Libraries/javacv-0.6-cppjars/javacv-cppjars/ffmpeg-20130915-git-7ac6c63-windows-x86_64.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

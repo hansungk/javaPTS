@@ -63,7 +63,10 @@ public class Main_OpticalFlow {
 
 			/// Process optical flow and find the background movement vector
 			IplImage imgPyrA = null;	//TODO 愿묐� �ш릿 �덇� �뚯븘�쒗빐
-			m.processOpticalFlow(m.imgPrev, m.imgCurr, imgPyrA, false);
+			double[] shift = m.processOpticalFlow(m.imgPrev, m.imgCurr, imgPyrA, false);
+			System.out.println();
+			System.out.println("X shift: " + shift[0]);
+			System.out.println("Y shift: " + shift[1]);
 
 			KeyEvent key = canvas1.waitKey(0);
 			if (key != null) {
@@ -172,7 +175,6 @@ public class Main_OpticalFlow {
 			CvPoint p1 = new CvPoint((int)p1x, (int)p1y);
 
 			//System.out.print("Status of " + (i+1) + " [" + p0.x() + "," + p0.y() + "]	: " + status[i]);
-
 			if (status[i]==0) { 
 				System.out.println("	<<< Error -- Zero status");
 				continue;
