@@ -823,8 +823,7 @@ public class Main {
 		for (IplImage il : imgFramesBetweenCatches)	cvReleaseImage(il);
 		imgFramesBetweenCatches.clear();
 		
-		CvSize _pyrSize = new CvSize(_size.width()+8, _size.height()/3+1);
-		IplImage imgPyrB = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
+		IplImage imgPyrA=null, imgPyrB=null;
 		double[] shift = opflow.processOpticalFlow(imgFirstThrown, imgFinalCaught, imgPyrA, imgPyrB, 2);
 		System.out.println("xshift: " + shift[0]);
 		System.out.println("yshift: " + shift[1]);
