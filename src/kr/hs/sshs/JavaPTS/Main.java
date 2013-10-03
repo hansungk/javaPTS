@@ -16,6 +16,7 @@ import com.googlecode.javacv.FrameGrabber;
 import com.googlecode.javacv.FrameGrabber.Exception;
 import com.googlecode.javacv.FrameRecorder;
 import com.googlecode.javacv.cpp.opencv_core.CvPoint;
+import com.googlecode.javacv.cpp.opencv_core.CvScalar;
 import com.googlecode.javacv.cpp.opencv_core.CvSize;
 import com.googlecode.javacv.cpp.opencv_core.IplImage;
 
@@ -56,10 +57,13 @@ public class Main {
 	IplImage imgBall; //Ball Image
 	IplImage imgSobel; //Sobel Image
 	IplImage imgCropped;
+	IplImage imgCropped2;
+	IplImage imgCropped3;
 	IplImage imgTemp;
 	//IplImage imgTemp2;
 	IplImage imgPyrA;	// PREV pyramid
 	IplImage imgPyrB;	// CURR pyramid
+	IplImage imgCatcher; //Image For Catcher
 	//IplImage imgMorph;
 	//IplImage imgMorphSobel;
 
@@ -139,15 +143,15 @@ public class Main {
 		canvas6 = new CanvasFrame("Catcher",CV_WINDOW_AUTOSIZE);
 		//canvas7 = new CanvasFrame("Morphology",CV_WINDOW_AUTOSIZE);
 		//canvas8 = new CanvasFrame("MorphSobel", CV_WINDOW_AUTOSIZE);
-		canvas9 = new CanvasFrame("VCD",CV_WINDOW_AUTOSIZE);
-		canvas11 = new CanvasFrame("FirstThrown",CV_WINDOW_AUTOSIZE);
-		canvas12 = new CanvasFrame("FinalCaught",CV_WINDOW_AUTOSIZE);
+		//canvas9 = new CanvasFrame("VCD",CV_WINDOW_AUTOSIZE);
+		//canvas11 = new CanvasFrame("FirstThrown",CV_WINDOW_AUTOSIZE);
+		//canvas12 = new CanvasFrame("FinalCaught",CV_WINDOW_AUTOSIZE);
 
 		// Initialize FrameRecorder/FrameGrabber
 		recorder = new FFmpegFrameRecorder(PATH + "video/trash.mp4", 640, 480);
 		recorder.setFrameRate(30);
 		recorder.start();
-		grabber = new FFmpegFrameGrabber(PATH + "video/cutting.mp4");
+		grabber = new FFmpegFrameGrabber(PATH + "video/fort2.mp4");
 		grabber.start();
 
 		// Get frame size
@@ -174,6 +178,7 @@ public class Main {
 		m.imgBlob = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		m.imgTemp = cvCreateImage(_size,IPL_DEPTH_8U,1);
 		m.imgCandidate = cvCreateImage(_size, IPL_DEPTH_8U, 1);
+		m.imgCatcher = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		//m.imgMorphSobel = cvCreateImage(_size, IPL_DEPTH_8U,1);
 		//m.imgCropped = cvCreateImage(_size, IPL_DEPTH_8U,1);
 		//m.imgMorph = cvCreateImage(_size,IPL_DEPTH_8U,1);
@@ -192,9 +197,7 @@ public class Main {
 			cvSmooth(m.imgTmpl, m.imgTmpl, CV_GAUSSIAN, 3);
 			cvCvtColor(m.imgTmpl,m.imgBW,CV_RGB2GRAY);
 			
-			IplImage toAdd = cvCreateImage(_size, IPL_DEPTH_8U, 1);
-			cvCopy(m.imgBW, toAdd);
-			m.imgFramesBetweenCatches.add(toAdd);	// Don't forget to release them all later
+			
 			
 			///
 			/// Looks tiny, is huge
@@ -203,12 +206,7 @@ public class Main {
 			///
 			
 			//Crop Image Around the Final Ball Point
-			ballcrop = new CvRect(Math.max(ballfinal.x()-cropsize,0), Math.max(ballfinal.y()-cropsize,0), Math.min(2*cropsize,2*(width-ballfinal.x())), Math.min(2*cropsize,2*(height-ballfinal.y())));
-			cvSetImageROI(m.imgSobel, ballcrop);
-			m.imgCropped = cvCreateImage(cvGetSize(m.imgSobel),IPL_DEPTH_8U,1);
-			cvCopy(m.imgSobel,m.imgCropped);
-			cvResetImageROI(m.imgSobel);
-			CatcherDetect.main(m.imgCropped);
+			
 			
 			cvCopy(m.imgBW, m.imgBW_prev);
 
@@ -216,13 +214,13 @@ public class Main {
 			canvas3.showImage(m.imgBall);
 			canvas4.showImage(m.imgCandidate);
 			canvas5.showImage(m.imgSobel);
-			canvas6.showImage(m.imgCropped);
+			canvas6.showImage(m.imgCatcher);
 			//canvas7.showImage(m.imgMorph);
 			//canvas8.showImage(m.imgMorphSobel);
-			canvas9.showImage(m.imgTemp);
+			//canvas9.showImage(m.imgTemp);
 			//canvas10.showImage(m.imgTemp2);
-			canvas11.showImage(m.imgFirstThrown);
-			canvas12.showImage(m.imgFinalCaught);
+			//canvas11.showImage(m.imgFirstThrown);
+			//canvas12.showImage(m.imgFinalCaught);
 
 			System.out.println("############## FRAME " + framecount + " ##############");
 
@@ -365,7 +363,12 @@ public class Main {
 //		IplImage imgRecovery;
 		
 		cvCanny(imgBW,imgSobel,80,200,3);
+		CatcherDetect.main(imgSobel);
 
+		IplImage toAdd = cvCreateImage(_size, IPL_DEPTH_8U, 1);
+		cvCopy(imgBW, toAdd);
+		imgFramesBetweenCatches.add(toAdd);	// Don't forget to release them all later
+		
 		switch (flag_BW) {
 		case 'c' :
 			/// DETECTING VALUE CHANGE
@@ -830,6 +833,39 @@ public class Main {
 		System.out.println("yshift: " + shift[1]);
 		shiftThrowCatch = shift;
 		
+		cvCanny(imgFirstThrown,imgFirstThrown,80,200,3);
+		cvCanny(imgFirstThrown2,imgFirstThrown2,80,200,3);
+		cvCanny(imgFirstThrown3,imgFirstThrown3,80,200,3);
+		
+		ballcrop = new CvRect(Math.max(ballfinal.x()-cropsize-(int)Math.round(shift[0]),0), Math.max(ballfinal.y()-cropsize-(int)Math.round(shift[1]),0), Math.min(2*cropsize,2*(width-ballfinal.x())), Math.min(2*cropsize,2*(height-ballfinal.y())));
+		cvSetImageROI(imgFirstThrown, ballcrop);
+		imgCropped = cvCreateImage(cvGetSize(imgFirstThrown),IPL_DEPTH_8U,1);
+		cvCopy(imgFirstThrown,imgCropped);
+		cvResetImageROI(imgFirstThrown);
+		cvSetImageROI(imgFirstThrown2, ballcrop);
+		imgCropped2 = cvCreateImage(cvGetSize(imgFirstThrown2),IPL_DEPTH_8U,1);
+		cvCopy(imgFirstThrown2,imgCropped2);
+		cvResetImageROI(imgFirstThrown2);
+		cvSetImageROI(imgFirstThrown3, ballcrop);
+		imgCropped3 = cvCreateImage(cvGetSize(imgFirstThrown3),IPL_DEPTH_8U,1);
+		cvCopy(imgFirstThrown3,imgCropped3);
+		cvResetImageROI(imgFirstThrown3);
+		CvPoint Catcher = FixingCenterofCatcher.findCatcher(imgCropped, imgCropped2, imgCropped3, caughtBallCtr);
+		if(Catcher == null){
+			System.out.println("Sorry. We couldn't recognize the catcher.");
+			return null;
+		}
+		Catcher.x(Catcher.x()+ballfinal.x()-cropsize);
+		Catcher.y(Catcher.y()+ballfinal.y()-cropsize);
+		System.out.println("x : " + Catcher.x() + " y : " + Catcher.y());
+		cvCopy(imgBW,imgCatcher);
+		cvRectangle(imgCatcher,new CvPoint(Math.max(Catcher.x()-10,0),Math.max(Catcher.y()-15,0)),new CvPoint(Math.min(Catcher.x()+10,width-1),Math.min(Catcher.y()+15,height-1)),new CvScalar(255,255,255,0),1,8,0);
+		//cvRectangle(imgCatcher,new CvPoint(50,50),new CvPoint(100,100),new CvScalar(180,180,180,0),1,8,0);
+		
+		cvReleaseImage(imgCropped);
+		cvReleaseImage(imgCropped2);
+		cvReleaseImage(imgCropped3);
+		
 		return shift;
 	}
 
@@ -839,7 +875,7 @@ public class Main {
 	public void cvReleaseAllLoop() {
 		// DO NOT RELEASE imgBW (stored in imgFirstThrownWannabies)
 		// Don't release *_prevs!
-		cvReleaseImage(imgCropped);
+		//cvReleaseImage(imgCropped);
 	}
 	
 	/**
@@ -863,6 +899,7 @@ public class Main {
 		cvReleaseImage(imgFirstThrown);
 		cvReleaseImage(imgFirstThrown2);
 		cvReleaseImage(imgFirstThrown3);
+		cvReleaseImage(imgCatcher);
 	}
 	
 	public String doubleArrayToString(double[] ds) {
