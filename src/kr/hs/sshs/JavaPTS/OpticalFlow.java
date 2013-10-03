@@ -75,9 +75,11 @@ public class OpticalFlow {
 		byte[] status = new byte[cornerCount[0]];
 		float[] featureErrors = new float[cornerCount[0]];
 
-		if(isPyrANeeded) imgPyrA = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
-		imgPyrB = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
-
+		// Memory mangement
+		cvReleaseImage(imgPyrB);	// WHAT D'YA KNOW
+		imgPyrB = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);	// Always shining new baby, BUT DONT RELEASE IT
+		if (isPyrANeeded) imgPyrA = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
+		
 		cvCalcOpticalFlowPyrLK(
 				imgPrev,
 				imgCurr,
@@ -91,7 +93,7 @@ public class OpticalFlow {
 				status,
 				featureErrors,
 				cvTermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, .3),
-				CV_LKFLOW_PYR_A_READY | CV_LKFLOW_INITIAL_GUESSES
+				isPyrANeeded?(0):(CV_LKFLOW_PYR_A_READY | CV_LKFLOW_INITIAL_GUESSES)
 				);
 		cvReleaseImage(imgPyrA);	// imgPyrA will never be used again (almost)
 									// imgPyrB will be used as imgPyrA' in the next call
