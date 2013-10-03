@@ -14,6 +14,7 @@ public class CatcherDetect {
 	
 	final static int rW=30, rH=36;
 	static int[][] roi = new int[rW][rH];
+	static int linethresh=9;
 	
 	public static void main(IplImage bw) {
 		
@@ -35,11 +36,30 @@ public class CatcherDetect {
 			for(int j = 0; j < _size.width(); j++){
 				if(cvGetReal2D(bw,i,j)>50){
 					bin[j][i]=1;
-					cvSetReal2D(bw,i,j,255);
+					//cvSetReal2D(bw,i,j,255);
 				}
 				else{
 					bin[j][i]=0;
-					cvSetReal2D(bw,i,j,0);
+					//cvSetReal2D(bw,i,j,0);
+				}
+			}
+		}
+		
+		//Line ignoring
+		for(int y=1; y<_size.height()-1; y++){
+			int lx=0, x=0;
+			while(x!=_size.width()){
+				if(bin[x][y]==0) {x++; lx=x;}
+				else x++;
+				if(x-lx>=linethresh && (x==_size.width() || bin[x][y]==0)){
+					for(int i=lx; i<x; i++){
+						//bin[i][y-1]=0;
+						bin[i][y]=0;
+						//bin[i][y+1]=0;
+						//cvSetReal2D(bw,y-1,i,0);
+						cvSetReal2D(bw,y,i,0);
+						//cvSetReal2D(bw,y+1,i,0);
+					}
 				}
 			}
 		}
@@ -56,7 +76,7 @@ public class CatcherDetect {
 			if(pY==_size.height()-rH) {break;}
 			
 			//initiate condition
-			if(bin[pX+rW/2][pY]==0||(pY>0 && bin[pX+rW/2][pY-1]==1)) { continue;}
+			if(bin[pX+rW/2][pY]!=1||(pY>0 && bin[pX+rW/2][pY-1]==1)) { continue;}
 			else {lEnd[0]=rW/2; rEnd[0]=rW/2;}
 
 			//System.out.println("pivot : ("+pX+","+pY+")" );
@@ -74,8 +94,8 @@ public class CatcherDetect {
 			//finding ends of the first line
 			k = rW/2-1;
 			for(int num=0; k!=-1; k--){
-				if(roi[k][0]==0) {num++; continue;}
-				if(num>=2) break;
+				if(roi[k][0]==0) {num++; if(num>=2) break; else continue;}
+				bin[pX+k][pY]=2;
 				lEnd[0]=k;
 				lMax=k;
 			}
@@ -119,15 +139,15 @@ public class CatcherDetect {
 				}
 				
 				int c= lEnd[m-1]+1;
-				if(c>-1 && c<rW && roi[c][k]==1) lEnd[k]=c;
+				if(c>-1 && c<rW && roi[c][k]>0) lEnd[k]=c;
 				c-=4;
-				if(c>-1 && c<rW && roi[c][k]==1) lEnd[k]=c;
+				if(c>-1 && c<rW && roi[c][k]>0) lEnd[k]=c;
 				c++;
-				if(c>-1 && c<rW && roi[c][k]==1) lEnd[k]=c;
+				if(c>-1 && c<rW && roi[c][k]>0) lEnd[k]=c;
 				c+=2;
-				if(c>-1 && c<rW && roi[c][k]==1) lEnd[k]=c;
+				if(c>-1 && c<rW && roi[c][k]>0) lEnd[k]=c;
 				c--;
-				if(c>-1 && c<rW && roi[c][k]==1) lEnd[k]=c;
+				if(c>-1 && c<rW && roi[c][k]>0) lEnd[k]=c;
 				
 				m=k;
 				
@@ -144,15 +164,15 @@ public class CatcherDetect {
 				}
 				
 				c= rEnd[m-1]-1;
-				if(c<rW && c>-1 && roi[c][k]==1) rEnd[k]=c;
+				if(c<rW && c>-1 && roi[c][k]>0) rEnd[k]=c;
 				c+=4;
-				if(c<rW && c>-1 && roi[c][k]==1) rEnd[k]=c;
+				if(c<rW && c>-1 && roi[c][k]>0) rEnd[k]=c;
 				c--;
-				if(c<rW && c>-1 && roi[c][k]==1) rEnd[k]=c;
+				if(c<rW && c>-1 && roi[c][k]>0) rEnd[k]=c;
 				c-=2;
-				if(c<rW && c>-1 && roi[c][k]==1) rEnd[k]=c;
+				if(c<rW && c>-1 && roi[c][k]>0) rEnd[k]=c;
 				c++;
-				if(c<rW && c>-1 && roi[c][k]==1) rEnd[k]=c;
+				if(c<rW && c>-1 && roi[c][k]>0) rEnd[k]=c;
 			}
 			
 			//if too short in vertical
@@ -162,8 +182,8 @@ public class CatcherDetect {
 			}
 			hMax = k;
 			
-			k=rH/3;
-			int n=rH/3;
+			k=rH/2;
+			int n=rH/2;
 			while(lEnd[k]==-1){k++; if(k==rH) {k--; break;}}
 			while(rEnd[n]==-1){n++; if(n==rH) {n--; break;}}
 			
@@ -176,6 +196,12 @@ public class CatcherDetect {
 			if(rEnd[n]-lEnd[k]<12) {
 				//System.out.println("shape not catcher");
 				continue;
+			}
+			
+			for(int i = pX+rW/4; i < pX+3*rW/4; i++){
+				for(int j = pY+1; j < pY+rH/2; j++){
+					bin[i][j]=2;
+				}
 			}
 			
 			//if(pX==1 && pY==0){

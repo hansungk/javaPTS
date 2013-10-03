@@ -119,7 +119,7 @@ public class Main {
 		recorder = new FFmpegFrameRecorder(PATH + "video/trash.mp4", 640, 480);
 		recorder.setFrameRate(30);
 		recorder.start();
-		grabber = new FFmpegFrameGrabber(PATH + "video/fort2.mp4");
+		grabber = new FFmpegFrameGrabber(PATH + "video/fort1.mp4");
 		grabber.start();
 
 		// Get frame size
@@ -157,7 +157,7 @@ public class Main {
 			//Crop Image Around the Final Ball Point
 			ballcrop = new CvRect(Math.max(ballfinal.x()-cropsize,0), Math.max(ballfinal.y()-cropsize,0), Math.min(2*cropsize,2*(width-ballfinal.x())), Math.min(2*cropsize,2*(height-ballfinal.y())));
 			
-			//cvSetImageROI(m.imgSobel, ballcrop);
+			cvSetImageROI(m.imgSobel, ballcrop);
 			m.imgCropped = cvCreateImage(cvGetSize(m.imgSobel),IPL_DEPTH_8U,1);
 			cvCopy(m.imgSobel,m.imgCropped);
 			cvResetImageROI(m.imgSobel);
@@ -396,7 +396,7 @@ public class Main {
 			///
 			/// BLOB FILTERING
 			if(!balldetermined)
-				blobFiltering(blobs, 3);
+				blobFiltering(blobs, 4);
 			///
 			///
 
