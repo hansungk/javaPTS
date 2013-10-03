@@ -62,8 +62,8 @@ public class Candidate {
 		}
 		//
 		
-		this.currentCenter = new BallInfo(new CvPoint(cd.currentCenter.x(), cd.currentCenter.y()), cd.currentCenter.count);
-		this.nextCenter = new BallInfo(new CvPoint(cd.nextCenter.x(), cd.nextCenter.y()), cd.nextCenter.count);
+		this.currentCenter = new BallInfo(new CvPoint(cd.currentCenter.x(), cd.currentCenter.y()), cd.currentCenter.pixelcount);
+		this.nextCenter = new BallInfo(new CvPoint(cd.nextCenter.x(), cd.nextCenter.y()), cd.nextCenter.pixelcount);
 		
 		this.x_shift = cd.x_shift;
 		this.y_shift = cd.y_shift;
@@ -154,31 +154,31 @@ public class Candidate {
 	}
 
 	public int countmin(){
-		return (int) (k1*this.centers.get(centers.size()-1).count);
+		return (int) (k1*this.centers.get(centers.size()-1).pixelcount);
 	}
 	public int countmax(){
 		//if(k2*this.centers.get(centers.size()-1).count<20)
-		return (int) (k2*this.centers.get(centers.size()-1).count);
+		return (int) (k2*this.centers.get(centers.size()-1).pixelcount);
 	}
 }
 
 class BallInfo {
 	CvPoint ctr;
-	int count;
+	int pixelcount;
 	
 	BallInfo(BallInfo toClone) {
 		ctr = new CvPoint(toClone.ctr.x(), toClone.ctr.y());
-		this.count = toClone.count;
+		this.pixelcount = toClone.pixelcount;
 	}
 	
 	BallInfo(CvPoint p) {
 		this.ctr = p;
-		this.count = 0;
+		this.pixelcount = 0;
 	}
 
 	BallInfo(CvPoint p, int i) {
 		this.ctr = p;
-		this.count = i;
+		this.pixelcount = i;
 	}
 
 	/**
