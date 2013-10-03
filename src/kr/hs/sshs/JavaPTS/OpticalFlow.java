@@ -75,7 +75,7 @@ public class OpticalFlow {
 		byte[] status = new byte[cornerCount[0]];
 		float[] featureErrors = new float[cornerCount[0]];
 
-		// Memory mangement	TODO
+		// Memory management	TODO
 		if (isPyrANew) {
 			cvReleaseImage(imgPyrB);	// orphaned imgPyrB (prev)
 			imgPyrA = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
