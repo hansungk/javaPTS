@@ -268,11 +268,11 @@ public class Main_OpticalFlow {
 		}
 		
 		// Now let's find the most 'populated' rooms
-		ArrayList<Vector> biggestTRoom1 = null, biggestTRoom2 = null;
-		ArrayList<Vector> biggestDRoom1 = null, biggestDRoom2 = null;
+		ArrayList<Vector> biggestTRoom1 = null;
+		ArrayList<Vector> biggestDRoom1 = null;
 		int biggestTRoomSize1=0, biggestTRoomSize2=0;
 		int biggestDRoomSize1=0, biggestDRoomSize2=0;
-		double tSum1=0, tSum2=0, dSum1=0, dSum2=0;
+		double tSum1=0, dSum1=0;
 		for(ArrayList<Vector> al : thetaRooms) {
 			int roomSize = al.size();
 			if (biggestTRoomSize1 < roomSize) {
@@ -283,7 +283,7 @@ public class Main_OpticalFlow {
 		for(ArrayList<Vector> al : thetaRooms) {
 			int roomSize = al.size();
 			if (biggestTRoomSize2 < roomSize && roomSize < biggestTRoomSize1) {
-				biggestTRoom2 = al;
+				//biggestTRoom2 = al;
 				biggestTRoomSize2 = roomSize;
 			}
 		}
@@ -297,7 +297,7 @@ public class Main_OpticalFlow {
 		for(ArrayList<Vector> al : distanceRooms) {
 			int roomSize = al.size();
 			if (biggestDRoomSize2 < roomSize && roomSize < biggestDRoomSize1) {
-				biggestDRoom2 = al;
+				//biggestDRoom2 = al;
 				biggestDRoomSize2 = roomSize;
 			}
 		}
@@ -305,19 +305,11 @@ public class Main_OpticalFlow {
 		for (Vector v : biggestTRoom1) {
 			tSum1 += v.theta();
 		}
-		for (Vector v : biggestTRoom2) {
-			tSum2 += v.theta();
-		}
 		for (Vector v : biggestDRoom1) {
 			dSum1 += v.length();
 		}
-		for (Vector v : biggestDRoom2) {
-			dSum2 += v.length();
-		}
 		double probableTheta1 = tSum1 / biggestTRoomSize1;
-		double probableTheta2 = tSum2 / biggestTRoomSize2;
 		double probableDistance1 = dSum1 / biggestDRoomSize1;
-		double probableDistance2 = dSum2 / biggestDRoomSize2;
 
 		// Massive sysouts
 		/*System.out.println();
@@ -380,8 +372,7 @@ public class Main_OpticalFlow {
 		}
 
 		// TEST AREA
-
-		if (false) {
+		/*if (false) {
 			deltaAPoints.clear();
 			deltaBPoints.clear();
 			deltaAPoints.add(new Vector(0.99619, 0.087156));
@@ -390,7 +381,7 @@ public class Main_OpticalFlow {
 			deltaBPoints.add(new Vector(0.70711, 0.70711));
 			deltaBPoints.add(new Vector(1.1472, 1.6383));
 			deltaBPoints.add(new Vector(1.2679, 2.7189));
-		}
+		}*/
 		
 		///
 		/// Rather primitive matrix calculation
