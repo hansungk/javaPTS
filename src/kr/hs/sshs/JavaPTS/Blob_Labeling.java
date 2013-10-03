@@ -5,8 +5,6 @@ import static com.googlecode.javacv.cpp.opencv_core.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.googlecode.javacv.cpp.opencv_core.IplImage;
-
 public class Blob_Labeling {
 	
 	//static IplImage org;
@@ -182,7 +180,7 @@ public class Blob_Labeling {
 			// count++;
 		}
 		
-		System.out.println("[Blob_Labelling.java] Blob size = " + blob.size());
+		//System.out.println("[Blob_Labelling.java] Blob size = " + blob.size());
 		//cvReleaseImage(org);
 		//cvReleaseImage(img);
 		return blob;
