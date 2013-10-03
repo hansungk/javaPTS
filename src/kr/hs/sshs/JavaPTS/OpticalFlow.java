@@ -3,7 +3,6 @@ package kr.hs.sshs.JavaPTS;
 import static com.googlecode.javacv.cpp.opencv_core.*;
 import static com.googlecode.javacv.cpp.opencv_imgproc.cvFindCornerSubPix;
 import static com.googlecode.javacv.cpp.opencv_imgproc.cvGoodFeaturesToTrack;
-import static com.googlecode.javacv.cpp.opencv_video.CV_LKFLOW_INITIAL_GUESSES;
 import static com.googlecode.javacv.cpp.opencv_video.CV_LKFLOW_PYR_A_READY;
 import static com.googlecode.javacv.cpp.opencv_video.cvCalcOpticalFlowPyrLK;
 
@@ -27,9 +26,9 @@ public class OpticalFlow {
 	 * @param imgPyrA		32-bit single channel image used to store and compute pyramid from prev frame<br>
 	 * 						(if flag, pyramid will be read from this image)
 	 * @param imgPyrB		32-bit single channel image used to compute pyramid from curr frame
-	 * @param flag			0: successive frame - will use imgCurr of 1 cycle ago as imgPrev of now<br>
-	 * 						1: jumped frame     - will cvCreateImage a new one<br>
-	 * 						2: fresh call		- first call, or  frames are completely independent to the video
+	 * @param flag			0: related(successive) frame - use imgCurr of 1 cycle ago as imgPrev of now<br>
+	 * 						1: jumped frame<br>
+	 * 						2: fresh call - bypasses any use of parameter variables
 	 * @return Returns the movement vector of the background in the form of double[] {xshift, yshift}
 	 */
 	public double[] processOpticalFlow(IplImage imgPrev, IplImage imgCurr, IplImage imgPyrA, IplImage imgPyrB, int flag) {
@@ -76,21 +75,29 @@ public class OpticalFlow {
 		byte[] status = new byte[cornerCount[0]];
 		float[] featureErrors = new float[cornerCount[0]];
 
-		// Memory management	TODO
-		if (flag == 1) {
-			cvReleaseImage(imgPyrB);	// orphaned imgPyrB (prev)
-			imgPyrA = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
-		} else if (flag == 2) {
-			imgPyrA = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
-			imgPyrB = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
+		// Memory management
+		IplImage imgPyrAIndep=null, imgPyrBIndep=null;
+		switch (flag) {
+		case 0:
+			cvZero(imgPyrB);
+			break;	// do nothing
+		case 1:
+			//imgPyrA.zero();
+			//imgPyrB.zero();
+			cvZero(imgPyrA);
+			cvZero(imgPyrB);
+			break;
+		case 2:
+			imgPyrAIndep = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
+			imgPyrBIndep = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
+			break;
 		}
-		imgPyrB = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);	// Always shining new baby, BUT DONT RELEASE IT
 		
 		cvCalcOpticalFlowPyrLK(
 				imgPrev,
 				imgCurr,
-				imgPyrA,
-				imgPyrB,
+				(flag==2)?imgPyrAIndep:imgPyrA,
+				(flag==2)?imgPyrBIndep:imgPyrB,
 				cornersA,
 				cornersB,
 				cornerCount[0],
@@ -99,12 +106,15 @@ public class OpticalFlow {
 				status,
 				featureErrors,
 				cvTermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, .3),
-				(flag==0)?(CV_LKFLOW_PYR_A_READY | CV_LKFLOW_INITIAL_GUESSES):0
+				(flag==0)?(CV_LKFLOW_PYR_A_READY):0
 				);
-		//imgPyrA = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
-		cvReleaseImage(imgPyrA);	// imgPyrA will never be used again (almost)
-									// imgPyrB will be used as imgPyrA' in the next call
-									// Release of imgCurr and imgPrev will be taken care by the caller
+		if(flag==2) {
+			cvReleaseImage(imgPyrAIndep);
+			cvReleaseImage(imgPyrBIndep);
+		} else
+			cvZero(imgPyrA);	// imgPyrA will never be used again (almost)
+							// imgPyrB will be used as imgPyrA' in the next call
+							// Release of imgCurr and imgPrev will be taken care by the caller
 		//System.out.println("CornerB: " + cornersB.get().length);
 
 		// Show what we are looking at
