@@ -23,6 +23,10 @@ public class Main {
 	/// Path to store resources
 	private static String PATH = "";
 
+	/// Class instances
+	OpticalFlow opflow;
+	ValueChangeDetect vcd;
+	
 	/// OpenCV Canvases
 	static CanvasFrame canvas1; // Canvas for showing result image
 	static CanvasFrame canvas2; // Canvas for showing original(BW) image
@@ -34,6 +38,8 @@ public class Main {
 	//static CanvasFrame canvas8;
 	static CanvasFrame canvas9;
 	//static CanvasFrame canvas10;
+	static CanvasFrame canvas11;
+	static CanvasFrame canvas12;
 
 	/// FFmpeg variables
 	static FrameGrabber grabber;
@@ -45,7 +51,8 @@ public class Main {
 	IplImage imgBW_prev;
 	IplImage imgBlob;	// Blob detection image
 	IplImage imgCandidate;	// Candidate image
-//	IplImage imgResult;	// result image
+	//IplImage imgResult;	// result image
+
 	IplImage imgBall; //Ball Image
 	IplImage imgSobel; //Sobel Image
 	IplImage imgCropped;
@@ -67,6 +74,7 @@ public class Main {
 
 	/// Flags
 	static char flag_BW = 'x';	// whether to display only BW image
+	static boolean flag_OpflowInitiated = false;
 	static boolean flag_D_Pressed = false;
 
 	/// Indicates whether a candidate is found
@@ -80,17 +88,22 @@ public class Main {
 
 	/// Stores all Candidate objects
 	List<Candidate>	ballCandidates = new ArrayList<Candidate>();// candidate storage
-	Candidate		detectedball;
-	
+	Candidate		detectedball;	
 	static BallInfo	ballfinal = new BallInfo(new CvPoint(cropsize,cropsize));
 	static CvRect	ballcrop;
 	
 	/// Final and initial data of the thrown ball
-	CvPoint			caughtBallCtr;
-	
-	/// IplImage and its candidates of the frame in which the ball starts to fly
-	List<IplImage>	imgFirstThrownWannabes;
-	IplImage		imgFirstThrown;
+	IplImage		imgFinalCaught;
+	int				detectedCandidateSize;
+	CvPoint			caughtBallCtr;		// Center point of the finally caught ball	
+	// IplImages of the frame in which the ball starts to fly;
+	// will store probable imgFT2 and 3 at the same time by packing them into 3-element array
+	List<IplImage>				imgFramesBetweenCatches;	// store all frames between ball catches
+	IplImage					imgFirstThrown;
+	IplImage					imgFirstThrown2;	// imgFirstThrown + 1 frame
+	IplImage					imgFirstThrown3;	// imgFirstThrown + 2 frames
+	// Optical flow data
+	double[]		shiftThrowCatch = {-1, -1};		// -1 means not yet processed
 	
 	/*
 	 * Optimized color threshold examples
@@ -111,9 +124,12 @@ public class Main {
 				"'d'	: Process\n" +
 				"others	: Bypass processing");
 
-		Main m = new Main();
-
 		/// Initialization
+		// Initialize instances
+		Main m = new Main();
+		m.opflow = new OpticalFlow();
+		m.vcd = new ValueChangeDetect();
+		
 		// Initialize canvases
 		//canvas1 = new CanvasFrame("result", CV_WINDOW_AUTOSIZE);
 		canvas2 = new CanvasFrame("blackwhite", CV_WINDOW_AUTOSIZE);
@@ -124,13 +140,14 @@ public class Main {
 		//canvas7 = new CanvasFrame("Morphology",CV_WINDOW_AUTOSIZE);
 		//canvas8 = new CanvasFrame("MorphSobel", CV_WINDOW_AUTOSIZE);
 		canvas9 = new CanvasFrame("VCD",CV_WINDOW_AUTOSIZE);
-		//canvas10 = new CanvasFrame("noFlow",CV_WINDOW_AUTOSIZE);
+		canvas11 = new CanvasFrame("FirstThrown",CV_WINDOW_AUTOSIZE);
+		canvas12 = new CanvasFrame("FinalCaught",CV_WINDOW_AUTOSIZE);
 
 		// Initialize FrameRecorder/FrameGrabber
 		recorder = new FFmpegFrameRecorder(PATH + "video/trash.mp4", 640, 480);
 		recorder.setFrameRate(30);
 		recorder.start();
-		grabber = new FFmpegFrameGrabber(PATH + "video/fort1" + ".mp4");
+		grabber = new FFmpegFrameGrabber(PATH + "video/cutting.mp4");
 		grabber.start();
 
 		// Get frame size
@@ -160,19 +177,30 @@ public class Main {
 		//m.imgMorphSobel = cvCreateImage(_size, IPL_DEPTH_8U,1);
 		//m.imgCropped = cvCreateImage(_size, IPL_DEPTH_8U,1);
 		//m.imgMorph = cvCreateImage(_size,IPL_DEPTH_8U,1);
+		m.imgFinalCaught = cvCreateImage(_size, IPL_DEPTH_8U, 1);
+		m.imgFirstThrown = cvCreateImage(_size, IPL_DEPTH_8U, 1);
+		m.imgFirstThrown2 = cvCreateImage(_size, IPL_DEPTH_8U, 1);
+		m.imgFirstThrown3 = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		
 		// Initialize variables used in decision
 		m.caughtBallCtr = new CvPoint(-1, -1);	// -1 means no ball was caught yet
-		m.imgFirstThrownWannabes = new ArrayList<IplImage>();
+		m.imgFramesBetweenCatches = new ArrayList<IplImage>();
+		//m.imgFirstThrownWannabes = new ArrayList<ArrayList<IplImage>>();
 
 		while (true) {
-
 			cvCopy(grab(), m.imgTmpl);
 			cvSmooth(m.imgTmpl, m.imgTmpl, CV_GAUSSIAN, 3);
 			cvCvtColor(m.imgTmpl,m.imgBW,CV_RGB2GRAY);
 			
-			// Process image!
+			IplImage toAdd = cvCreateImage(_size, IPL_DEPTH_8U, 1);
+			cvCopy(m.imgBW, toAdd);
+			m.imgFramesBetweenCatches.add(toAdd);	// Don't forget to release them all later
+			
+			///
+			/// Looks tiny, is huge
 			m.process();
+			///
+			///
 			
 			//Crop Image Around the Final Ball Point
 			ballcrop = new CvRect(Math.max(ballfinal.x()-cropsize,0), Math.max(ballfinal.y()-cropsize,0), Math.min(2*cropsize,2*(width-ballfinal.x())), Math.min(2*cropsize,2*(height-ballfinal.y())));
@@ -193,6 +221,8 @@ public class Main {
 			//canvas8.showImage(m.imgMorphSobel);
 			canvas9.showImage(m.imgTemp);
 			//canvas10.showImage(m.imgTemp2);
+			canvas11.showImage(m.imgFirstThrown);
+			canvas12.showImage(m.imgFinalCaught);
 
 			System.out.println("############## FRAME " + framecount + " ##############");
 
@@ -222,7 +252,7 @@ public class Main {
 					cvSaveImage(PATH + "ssB.jpg", m.imgBW);
 					System.out.println("Saved as ssB.jpg");
 				} else if (key.getKeyCode() == KeyEvent.VK_R) { // Record frames in an .avi file
-//					recorder.record(m.imgResult);
+					//recorder.record(m.imgResult);
 				} else if (key.getKeyCode() == KeyEvent.VK_F) { // FFW 2 frames
 					flag_D_Pressed=false;
 					m.cvReleaseAllLoop();	
@@ -258,6 +288,8 @@ public class Main {
 		//canvas8.dispose();
 		canvas9.dispose();
 		//canvas10.dispose();
+		canvas11.dispose();
+		canvas12.dispose();
 		
 		System.out.println("(TERMINATED)");
 	}
@@ -312,8 +344,7 @@ public class Main {
 				cvSetReal2D(imgBW, y, x, (temp>=0)?temp:0);
 			}
 		}
-
-//		cvCopy(imgBW, imgResult);
+		//cvCopy(imgBW, imgResult);
 
 		cvReleaseImage(imgBW);
 	}
@@ -338,24 +369,19 @@ public class Main {
 		switch (flag_BW) {
 		case 'c' :
 			/// DETECTING VALUE CHANGE
-			ValueChangeDetect scd = new ValueChangeDetect();
-			scd.initialize(imgBW_prev, imgBW);
-			binary = scd.detectChange();
+			vcd.initialize(imgBW_prev, imgBW);
+			binary = vcd.detectChange();
 		break;
 		case 'd' :
-			OpticalFlow opflow = new OpticalFlow();
-			scd = new ValueChangeDetect();
+			vcd = new ValueChangeDetect();
 			
 			// Memory management
-//			// You'll never want to initialize imgPyrA
-//			if(flag_VirginDKey) {
-//				CvSize _pyrSize = new CvSize(_size.width()+8, _size.height()/3+1);
-//				//imgPyrB = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
-//			}
+			// You'll never want to initialize imgPyrA
 			if(flag_D_Pressed) {
 				imgPyrA = imgPyrB;
 			}
-			double[] shift = opflow.processOpticalFlow(imgBW_prev, imgBW, imgPyrA, imgPyrB, !flag_D_Pressed);
+			double[] shift = opflow.processOpticalFlow(imgBW_prev, imgBW, imgPyrA, imgPyrB, flag_OpflowInitiated?2:(flag_D_Pressed?0:1));
+			flag_OpflowInitiated = false;
 			ValueChangeDetect.mX=(int)Math.round(shift[0]);
 			ValueChangeDetect.mY=(int)Math.round(shift[1]);
 			System.out.println(ValueChangeDetect.mX + " and " + ValueChangeDetect.mY);
@@ -364,8 +390,8 @@ public class Main {
 			flag_D_Pressed = true;
 			
 			/// DETECTING VALUE CHANGE
-			scd.initialize(imgBW_prev, imgBW);
-			binary = scd.detectChange();
+			vcd.initialize(imgBW_prev, imgBW);
+			binary = vcd.detectChange();
 			
 			//Printing SCD Result
 			for(int x = 0; x<width; x++){
@@ -417,7 +443,7 @@ public class Main {
 			// Adding new blobs into existing Candidates --
 			// get each Candidate, add a new center at the end of it,
 			// and then put it onto the top of the ballCandidates
-			
+			// 'ballCandidates' AND 'imgFirstThrownWannabies' SHOULD ALWAYS BE INDEX-MATCHED			
 			
 			for (int q = ballCandidates.size()-1; q>=0; q--) {
 				Candidate cc = new Candidate(ballCandidates.get(q));
@@ -451,10 +477,15 @@ public class Main {
 								System.out.println("BALL WAS CAUGHT /nf");
 								//System.out.println("The Speed of Pitch is " + 1503/detectedball.centers.size() + "km/h");
 								ballfinal=detectedball.centers.get(detectedball.centers.size()-1); // last ball in the "elected" ball candidate
-								caughtBallCtr = ballfinal.ctr;
+								detectedCandidateSize = detectedball.centers.size();
+								
+								// Hookup of Strike-Ball
+								preprocessingStrikeBall();
+								
 								ValueChangeDetect.v_thresh=350;
 								ValueChangeDetect.singlethresh=40;
 								balldetermined=false;
+								
 							}
 						}
 						else {
@@ -507,9 +538,6 @@ public class Main {
 					if (blob.count>=45) {
 						ballCandidates.add(new Candidate(blob)); //New Candidate
 						//System.out.println("NEW CANDIDATE WAS CREATED");
-						
-						// Could be the first ball of when ball is thrown
-						imgFirstThrownWannabes.add(imgBW);
 					}
 				}
 			}
@@ -745,28 +773,71 @@ public class Main {
 					}
 				}
 			}
+			
 			if (caught) {
 				if (ballCandidates.size() == 1) {
 					ballCandidates.get(0).centers.remove(ballCandidates.get(0).centers.size() - 1);
 					detectedball = new Candidate(ballCandidates.get(0));
 					drawBall();
-					//System.out.println("BALL WAS CAUGHT /j");
+					System.out.println("BALL WAS CAUGHT /j");
 					//System.out.println("The Speed of Pitch is " + 1080/detectedball.centers.size() + "km/h");
 					ballfinal=detectedball.centers.get(detectedball.centers.size()-1);
+					detectedCandidateSize = detectedball.centers.size();
+					
+					/// Another place where ball is caught
+					preprocessingStrikeBall();
+					
 					ballCandidates.remove(0);
 					ValueChangeDetect.v_thresh=350;
 					ValueChangeDetect.singlethresh=40;
 					balldetermined=false;
+					
 				}
-				else ballCandidates.remove(i);
+				else {
+					ballCandidates.remove(i);
+				}
 			}
 		}
+	}
+	
+	/**
+	 * Pre-process for Strike-Ball decision.<br>
+	 * - Find final ball position<br>
+	 * - Store first and last frame of ball flying<br>
+	 * - Store 2 more frames right after the first frame, for accurate catcher detection
+	 * @return Background shift between the ball-thrown frame and the ball-caught frame
+	 */
+	public double[] preprocessingStrikeBall() {
+		// Store the last state of the ball
+		cvCopy(imgBW, imgFinalCaught);
+		caughtBallCtr = ballfinal.ctr;
+		// Find ball-thrown frame, "+1, "+2
+		int framesago = detectedCandidateSize+1;	// assume there was NOT a ball jumping at the end
+													// (therefore last ball caught was currframe-2
+		int thrownFrameIndex = (imgFramesBetweenCatches.size()-1) - framesago;
+		cvCopy(imgFramesBetweenCatches.get(thrownFrameIndex),imgFirstThrown);
+		cvCopy(imgFramesBetweenCatches.get(thrownFrameIndex+1),imgFirstThrown2);
+		cvCopy(imgFramesBetweenCatches.get(thrownFrameIndex+2),imgFirstThrown3);
+		
+		// Clear frames list
+		for (IplImage il : imgFramesBetweenCatches)	cvReleaseImage(il);
+		imgFramesBetweenCatches.clear();
+		
+		CvSize _pyrSize = new CvSize(_size.width()+8, _size.height()/3+1);
+		IplImage imgPyrA = null, imgPyrB = null;
+		double[] shift = opflow.processOpticalFlow(imgFirstThrown, imgFinalCaught, imgPyrA, imgPyrB, 2);
+		System.out.println("xshift: " + shift[0]);
+		System.out.println("yshift: " + shift[1]);
+		shiftThrowCatch = shift;
+		
+		return shift;
 	}
 
 	/**
 	* Release all redundant resources <b>at the end of the loop.</b>
 	*/
 	public void cvReleaseAllLoop() {
+		// DO NOT RELEASE imgBW (stored in imgFirstThrownWannabies)
 		// Don't release *_prevs!
 		cvReleaseImage(imgCropped);
 	}
@@ -780,7 +851,7 @@ public class Main {
 		cvReleaseImage(imgBW_prev);
 		cvReleaseImage(imgBlob);
 		cvReleaseImage(imgCandidate);
-//		cvReleaseImage(imgResult);
+		//cvReleaseImage(imgResult);
 		cvReleaseImage(imgBall);
 		cvReleaseImage(imgSobel);
 		cvReleaseImage(imgCropped);
@@ -788,6 +859,10 @@ public class Main {
 		//cvReleaseImage(imgTemp2);
 		cvReleaseImage(imgPyrA);
 		cvReleaseImage(imgPyrB);
+		cvReleaseImage(imgFinalCaught);
+		cvReleaseImage(imgFirstThrown);
+		cvReleaseImage(imgFirstThrown2);
+		cvReleaseImage(imgFirstThrown3);
 	}
 	
 	public String doubleArrayToString(double[] ds) {
