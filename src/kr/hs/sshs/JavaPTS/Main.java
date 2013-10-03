@@ -45,7 +45,7 @@ public class Main {
 	IplImage imgBW_prev;
 	IplImage imgBlob;	// Blob detection image
 	IplImage imgCandidate;	// Candidate image
-	IplImage imgResult;	// result image
+//	IplImage imgResult;	// result image
 	IplImage imgBall; //Ball Image
 	IplImage imgSobel; //Sobel Image
 	IplImage imgCropped;
@@ -130,7 +130,7 @@ public class Main {
 		recorder = new FFmpegFrameRecorder(PATH + "video/trash.mp4", 640, 480);
 		recorder.setFrameRate(30);
 		recorder.start();
-		grabber = new FFmpegFrameGrabber(PATH + "video/fort2.mp4");
+		grabber = new FFmpegFrameGrabber(PATH + "video/fort1" + ".mp4");
 		grabber.start();
 
 		// Get frame size
@@ -222,7 +222,7 @@ public class Main {
 					cvSaveImage(PATH + "ssB.jpg", m.imgBW);
 					System.out.println("Saved as ssB.jpg");
 				} else if (key.getKeyCode() == KeyEvent.VK_R) { // Record frames in an .avi file
-					recorder.record(m.imgResult);
+//					recorder.record(m.imgResult);
 				} else if (key.getKeyCode() == KeyEvent.VK_F) { // FFW 2 frames
 					flag_D_Pressed=false;
 					m.cvReleaseAllLoop();	
@@ -313,7 +313,7 @@ public class Main {
 			}
 		}
 
-		cvCopy(imgBW, imgResult);
+//		cvCopy(imgBW, imgResult);
 
 		cvReleaseImage(imgBW);
 	}
@@ -547,7 +547,7 @@ public class Main {
 		break;
 
 		default : // Do nothing
-			cvCopy(imgBW, imgResult);
+			//cvCopy(imgBW, imgResult);
 		break;
 		}
 		// Check Blob Detecting -- end
@@ -780,7 +780,7 @@ public class Main {
 		cvReleaseImage(imgBW_prev);
 		cvReleaseImage(imgBlob);
 		cvReleaseImage(imgCandidate);
-		cvReleaseImage(imgResult);
+//		cvReleaseImage(imgResult);
 		cvReleaseImage(imgBall);
 		cvReleaseImage(imgSobel);
 		cvReleaseImage(imgCropped);

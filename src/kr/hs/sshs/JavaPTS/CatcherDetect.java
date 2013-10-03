@@ -2,6 +2,9 @@ package kr.hs.sshs.JavaPTS;
 
 import static com.googlecode.javacv.cpp.opencv_core.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.googlecode.javacv.cpp.opencv_core.CvScalar;
 import com.googlecode.javacv.cpp.opencv_core.CvSize;
 
@@ -10,9 +13,11 @@ public class CatcherDetect {
 	final static int rW=30, rH=36;
 	static int[][] roi = new int[rW][rH];
 	static int linethresh=9;
+	static List<CvPoint> centers;
 	
-	public static void main(IplImage bw) {
+	public static List<CvPoint> main(IplImage bw) {
 		
+		centers = new ArrayList<CvPoint>();
 		int pX=0,pY=0;
 		int lMax=0, rMax=0, hMax=0;
 
@@ -127,7 +132,7 @@ public class CatcherDetect {
 				}
 				
 				//too much missing upper line -> notCatcher
-				if(m<=k-4){
+				if(m<=k-5){
 					notCatcher=true;
 					//System.out.println("cut");
 					break;
@@ -152,7 +157,7 @@ public class CatcherDetect {
 				}
 				
 				//too much missing upper line -> notCatcher
-				if(m<=k-4){
+				if(m<=k-5){
 					notCatcher=true;
 					//System.out.println("cut");
 					break;
@@ -183,12 +188,17 @@ public class CatcherDetect {
 			while(rEnd[n]==-1){n++; if(n==rH) {n--; break;}}
 			
 			//not good shape
-			if(lEnd[0]<lEnd[k]+3 || rEnd[0]>rEnd[n]-3) {
+			if(lEnd[0]<lEnd[k]+2 || rEnd[0]>rEnd[n]-2) {
 				//System.out.println("shape not catcher");
 				continue;
 			}
 			
-			if(rEnd[n]-lEnd[k]<12) {
+			if(Math.abs(rEnd[n]-rEnd[0]-lEnd[0]+lEnd[k])>4){
+				System.out.println("shape not so symmetric");
+				continue;
+			}
+			
+			if(rEnd[n]-lEnd[k]<10) {
 				//System.out.println("shape not catcher");
 				continue;
 			}
@@ -213,9 +223,12 @@ public class CatcherDetect {
 				}
 			}
 			//}
-		cvRectangle(bw,new CvPoint(pX+lMax,pY),new CvPoint(pX+rMax,pY+hMax),new CvScalar(180,180,180,0),1,8,0);
-			
+			cvRectangle(bw,new CvPoint(pX+lMax,pY),new CvPoint(pX+rMax,pY+hMax),new CvScalar(180,180,180,0),1,8,0);
+		
+			centers.add(new CvPoint(((2*pX+lMax+rMax)/2),((2*pY+hMax)/2)));
 		}
+	
+		return centers;
 		
 	}
 	
