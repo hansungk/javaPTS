@@ -378,9 +378,9 @@ public class Main {
 			if(flag_D_Pressed) {
 				imgPyrA = imgPyrB;
 			}
-			System.out.println("FLAG:" + flag_D_Pressed);
-			boolean isRelated = flag_D_Pressed;
-			double[] shift = opflow.processOpticalFlow(imgBW_prev, imgBW, imgPyrA, imgPyrB, isRelated);
+			int flag = (flag_OpflowInitiated)?((flag_D_Pressed)?0:1):2;
+			System.out.println("FLAG:" + flag);
+			double[] shift = opflow.processOpticalFlow(imgBW_prev, imgBW, imgPyrA, imgPyrB, flag);
 			flag_OpflowInitiated = true;
 			ValueChangeDetect.mX=(int)Math.round(shift[0]);
 			ValueChangeDetect.mY=(int)Math.round(shift[1]);
@@ -823,12 +823,7 @@ public class Main {
 		for (IplImage il : imgFramesBetweenCatches)	cvReleaseImage(il);
 		imgFramesBetweenCatches.clear();
 		
-		IplImage imgPyrA, imgPyrB;	// Use separate pyramid values, to avoid contaminating video optical flow
-		imgPyrA = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
-		imgPyrB = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
-		double[] shift = opflow.processOpticalFlow(imgFirstThrown, imgFinalCaught, imgPyrA, imgPyrB, false);
-		cvReleaseImage(imgPyrA);
-		cvReleaseImage(imgPyrB);
+		double[] shift = opflow.processOpticalFlow(imgFirstThrown, imgFinalCaught, imgPyrA, imgPyrB, 2);
 		System.out.println("xshift: " + shift[0]);
 		System.out.println("yshift: " + shift[1]);
 		shiftThrowCatch = shift;
