@@ -63,7 +63,10 @@ public class Main_OpticalFlow {
 
 			/// Process optical flow and find the background movement vector
 			IplImage imgPyrA = null, imgPyrB = null;	//TODO 광민 여긴 너가 알아서해
-			m.processOpticalFlow(m.imgPrev, m.imgCurr, imgPyrA, imgPyrB, false);
+			double[] shift = m.processOpticalFlow(m.imgPrev, m.imgCurr, imgPyrA, imgPyrB, false);
+			System.out.println();
+			System.out.println("X shift: " + shift[0]);
+			System.out.println("Y shift: " + shift[1]);
 
 			KeyEvent key = canvas1.waitKey(0);
 			if (key != null) {
