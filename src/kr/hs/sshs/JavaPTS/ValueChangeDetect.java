@@ -22,8 +22,8 @@ public class ValueChangeDetect {
 		prev = cvCreateImage(cvSize(prev_in.width(),prev_in.height()),IPL_DEPTH_8U,1);
 		next = cvCreateImage(cvSize(next_in.width(),next_in.height()),IPL_DEPTH_8U,1);
 		
-		cvCvtColor(prev_in, prev, CV_RGB2GRAY);
-		cvCvtColor(next_in, next, CV_RGB2GRAY);
+		cvCopy(prev_in, prev);
+		cvCopy(next_in, next);
 	}
 
 	public int[][] detectChange(){
