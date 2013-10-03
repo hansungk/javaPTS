@@ -40,7 +40,6 @@ public class Main {
 
 	/// IplImage variables
 	IplImage imgTmpl;	// template image (RGB)
-	IplImage imgTmpl_prev;	// template image - 1 frame ago
 	IplImage imgBW;		// template blackwhite image
 	IplImage imgBW_prev;
 	IplImage imgBlob;	// Blob detection image
@@ -128,44 +127,50 @@ public class Main {
 
 		// Get frame size
 		_size = cvGetSize(grab());
+		m.imgTmpl = cvCreateImage(_size, IPL_DEPTH_8U, 3);
+		cvCopy(grab(), m.imgTmpl);
+		m.imgBW = cvCreateImage(_size, IPL_DEPTH_8U, 1);
+		cvCvtColor(m.imgTmpl,m.imgBW,CV_RGB2GRAY);
+		
 		width = _size.width();
 		height = _size.height();
 
 		// Initialize IplImages
 		// (DO NOT RELEASE THESE --- intialized only 1 time, reused)
-		m.imgTmpl_prev = cvCreateImage(_size, IPL_DEPTH_8U, 3);
 		m.imgBW_prev = cvCreateImage(_size, IPL_DEPTH_8U, 1);
+		cvCopy(m.imgBW,m.imgBW_prev);
 		m.imgBall = cvCreateImage(_size,IPL_DEPTH_8U,1);
-		cvCopy(grab(), m.imgTmpl_prev);
+		cvCopy(grab(), m.imgTmpl);
+		cvCvtColor(m.imgTmpl,m.imgBW,CV_RGB2GRAY);
 
-		m.imgCandidate = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		m.imgSobel = cvCreateImage(_size, IPL_DEPTH_8U,1);
 		m.imgPyrA = cvCreateImage(_size,IPL_DEPTH_32F,1);
+		m.imgBlob = cvCreateImage(_size, IPL_DEPTH_8U, 1);
+		m.imgResult = cvCreateImage(_size, IPL_DEPTH_8U, 1);
+		m.imgTemp = cvCreateImage(_size,IPL_DEPTH_8U,1);
+		m.imgCandidate = cvCreateImage(_size, IPL_DEPTH_8U, 1);
+		//imgTemp2 = cvCreateImage(_size,IPL_DEPTH_8U,1);
 		//m.imgMorphSobel = cvCreateImage(_size, IPL_DEPTH_8U,1);
 		//m.imgCropped = cvCreateImage(_size, IPL_DEPTH_8U,1);
 		//m.imgMorph = cvCreateImage(_size,IPL_DEPTH_8U,1);
 
 		while (true) {
-			m.imgTmpl = cvCreateImage(_size, IPL_DEPTH_8U, 3);;
-			m.imgCandidate = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 
 			cvCopy(grab(), m.imgTmpl);
 			cvSmooth(m.imgTmpl, m.imgTmpl, CV_GAUSSIAN, 3);
-
+			cvCvtColor(m.imgTmpl,m.imgBW,CV_RGB2GRAY);
 			
 			// Process image!
 			m.process();
 			
 			//Crop Image Around the Final Ball Point
 			ballcrop = new CvRect(Math.max(ballfinal.x()-cropsize,0), Math.max(ballfinal.y()-cropsize,0), Math.min(2*cropsize,2*(width-ballfinal.x())), Math.min(2*cropsize,2*(height-ballfinal.y())));
-			
 			cvSetImageROI(m.imgSobel, ballcrop);
 			m.imgCropped = cvCreateImage(cvGetSize(m.imgSobel),IPL_DEPTH_8U,1);
 			cvCopy(m.imgSobel,m.imgCropped);
 			cvResetImageROI(m.imgSobel);
 			CatcherDetect.main(m.imgCropped);
 			
-			cvCopy(m.imgTmpl, m.imgTmpl_prev);
 			cvCopy(m.imgBW, m.imgBW_prev);
 
 			canvas2.showImage(m.imgBW);
@@ -285,7 +290,6 @@ public class Main {
 	public void stretch() {
 		IplImage imgBW = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		cvCvtColor(imgTmpl, imgBW, CV_RGB2GRAY);
-		imgResult = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 
 		// CvHistogram hist = new CvHistogram();
 		// cvCalcHist(imgBW, hist, 0, null);
@@ -311,12 +315,6 @@ public class Main {
 		width = imgTmpl.width();
 		height = imgTmpl.height();
 
-		imgBlob = cvCreateImage(_size, IPL_DEPTH_8U, 1);
-		imgBW = cvCreateImage(_size, IPL_DEPTH_8U, 1);
-		imgResult = cvCreateImage(_size, IPL_DEPTH_8U, 1);
-		imgSobel = cvCreateImage(_size,IPL_DEPTH_8U,1);
-		imgTemp = cvCreateImage(_size,IPL_DEPTH_8U,1);
-		//imgTemp2 = cvCreateImage(_size,IPL_DEPTH_8U,1);
 		cvCvtColor(imgTmpl, imgBW, CV_RGB2GRAY);
 		
 		binary = new int[width][height];
@@ -331,7 +329,7 @@ public class Main {
 		case 'c' :
 			/// DETECTING VALUE CHANGE
 			ValueChangeDetect scd = new ValueChangeDetect();
-			scd.initialize(imgTmpl_prev, imgTmpl);
+			scd.initialize(imgBW_prev, imgBW);
 			binary = scd.detectChange();
 		break;
 		case 'd' :
@@ -356,7 +354,7 @@ public class Main {
 			flag_D_Pressed = true;
 			
 			/// DETECTING VALUE CHANGE
-			scd.initialize(imgTmpl_prev, imgTmpl);
+			scd.initialize(imgBW_prev, imgBW);
 			binary = scd.detectChange();
 			
 			//Printing SCD Result
@@ -759,14 +757,7 @@ public class Main {
 	*/
 	public void cvReleaseAllLoop() {
 		// Don't release *_prevs!
-		cvReleaseImage(imgBlob);
-		cvReleaseImage(imgResult);
-		cvReleaseImage(imgBW);
-		cvReleaseImage(imgTmpl);
-		cvReleaseImage(imgCandidate);
-		cvReleaseImage(imgSobel);
 		cvReleaseImage(imgCropped);
-		cvReleaseImage(imgTemp);
 	}
 	
 	/**
@@ -774,7 +765,6 @@ public class Main {
 	*/
 	public void cvReleaseAllFinal() {
 		cvReleaseImage(imgTmpl);
-		cvReleaseImage(imgTmpl_prev);
 		cvReleaseImage(imgBW);
 		cvReleaseImage(imgBW_prev);
 		cvReleaseImage(imgBlob);
