@@ -27,11 +27,11 @@ public class OpticalFlow {
 	 * @param imgPyrA		32-bit single channel image used to store and compute pyramid from prev frame<br>
 	 * 						(if flag, pyramid will be read from this image)
 	 * @param imgPyrB		32-bit single channel image used to compute pyramid from curr frame
-	 * @param isPyrANeeded	true:  will use imgCurr of 1 cycle ago as imgPrev of now<br>
-	 * 						false: will cvCreateImage a new one
+	 * @param isPyrANew			false: successive frame - will use imgCurr of 1 cycle ago as imgPrev of now<br>
+	 * 						true: jumped frame     - will cvCreateImage a new one<br>
 	 * @return Returns the movement vector of the background in the form of double[] {xshift, yshift}
 	 */
-	public double[] processOpticalFlow(IplImage imgPrev, IplImage imgCurr, IplImage imgPyrA, IplImage imgPyrB, boolean isPyrANeeded) {
+	public double[] processOpticalFlow(IplImage imgPrev, IplImage imgCurr, IplImage imgPyrA, IplImage imgPyrB, boolean isPyrANew) {
 		CvSize _winSize = new CvSize(10,10);
 
 		_size=cvGetSize(imgPrev);
@@ -56,7 +56,7 @@ public class OpticalFlow {
 				);
 		cvReleaseImage(imgEig);
 		cvReleaseImage(imgTemp);
-		System.out.println("# of corners: " + cornerCount[0]);
+		//System.out.println("# of corners: " + cornerCount[0]);
 		//System.out.println(m.doubleArrayToString(cornersA.get()));
 
 		// Find subpixel corners
@@ -75,12 +75,12 @@ public class OpticalFlow {
 		byte[] status = new byte[cornerCount[0]];
 		float[] featureErrors = new float[cornerCount[0]];
 
-		// Memory mangement
-		imgPyrB = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);	// Always shining new baby, BUT DONT RELEASE IT
-		if (isPyrANeeded) {
-			cvReleaseImage(imgPyrB);
+		// Memory mangement	TODO
+		if (isPyrANew) {
+			cvReleaseImage(imgPyrB);	// orphaned imgPyrB (prev)
 			imgPyrA = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
-		}
+		}		
+		imgPyrB = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);	// Always shining new baby, BUT DONT RELEASE IT
 		
 		cvCalcOpticalFlowPyrLK(
 				imgPrev,
@@ -95,12 +95,13 @@ public class OpticalFlow {
 				status,
 				featureErrors,
 				cvTermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, .3),
-				isPyrANeeded?(0):(CV_LKFLOW_PYR_A_READY | CV_LKFLOW_INITIAL_GUESSES)
+				isPyrANew?(0):(CV_LKFLOW_PYR_A_READY | CV_LKFLOW_INITIAL_GUESSES)
 				);
+		//imgPyrA = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
 		cvReleaseImage(imgPyrA);	// imgPyrA will never be used again (almost)
 									// imgPyrB will be used as imgPyrA' in the next call
 									// Release of imgCurr and imgPrev will be taken care by the caller
-		System.out.println("CornerB: " + cornersB.get().length);
+		//System.out.println("CornerB: " + cornersB.get().length);
 
 		// Show what we are looking at
 		float errorCriteria = 500.0f;
@@ -115,13 +116,13 @@ public class OpticalFlow {
 
 			//System.out.print("Status of " + (i+1) + " [" + p0.x() + "," + p0.y() + "]	: " + status[i]);
 			if (status[i]==0) { 
-				System.out.println("	<<< Error -- Zero status");
+				//System.out.println("	<<< Error -- Zero status");
 				continue;
 			} else if (featureErrors[i] > errorCriteria) {
-				System.out.println("	<<< Error -- Too long error (" + featureErrors[i] + ", criteria:" + errorCriteria + ")");
+				//System.out.println("	<<< Error -- Too long error (" + featureErrors[i] + ", criteria:" + errorCriteria + ")");
 				continue;
 			} else { // Passed the test!
-				System.out.println();
+				//System.out.println();
 				successAPointsL.add(new Vector(p0x, p0y));
 				successBPointsL.add(new Vector(p1x, p1y));
 			}
@@ -147,7 +148,7 @@ public class OpticalFlow {
 	public double[] findBgMovement(List<Vector> APoints, List<Vector> BPoints) throws Exception {
 		int flowsCount = APoints.size();
 		if (flowsCount != BPoints.size()) throw new Exception("Two Points vector lists have different size -- somthing went wrong");
-		System.out.println("Successful: " + flowsCount);
+		//System.out.println("Successful: " + flowsCount);
 
 		List<Vector> flows = new ArrayList<Vector>();
 		for(int i=0; i<APoints.size(); i++) {
@@ -321,7 +322,7 @@ public class OpticalFlow {
 		/// Rather primitive matrix calculation
 		///
 		int n=deltaAPoints.size();
-		System.out.println(n);
+		//System.out.println(n);
 		// S=(A^T)*A
 		double s11=0, s12=0, s21=0, s22=0;
 		Vector Ak;
@@ -348,10 +349,10 @@ public class OpticalFlow {
 		double p1 = si11*r1 + si12*r2;	// ~ cosT
 		double p2 = si21*r1 + si22*r2;	// ~ sinT
 		
-		System.out.println("cosT ~ "+p1);
-		System.out.println("sinT ~ "+-1*p2);
-		System.out.println("c^2+s^2= " + (p1*p1 + p2*p2));
-		System.out.println("Accuracy= " + ((p1*p1 + p2*p2)-1)*100);
+		//System.out.println("cosT ~ "+p1);
+		//System.out.println("sinT ~ "+-1*p2);
+		//System.out.println("c^2+s^2= " + (p1*p1 + p2*p2));
+		//System.out.println("Accuracy= " + ((p1*p1 + p2*p2)-1)*100);
 		
 		// Now get p and q (deprecated)
 	}
