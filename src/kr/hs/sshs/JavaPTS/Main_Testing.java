@@ -2,10 +2,6 @@ package kr.hs.sshs.JavaPTS;
 
 import static com.googlecode.javacv.cpp.opencv_core.*;
 import static com.googlecode.javacv.cpp.opencv_highgui.*;
-import static com.googlecode.javacv.cpp.opencv_imgproc.*;
-
-import java.awt.Canvas;
-
 import com.googlecode.javacv.cpp.opencv_core.IplImage;
 
 public class Main_Testing {

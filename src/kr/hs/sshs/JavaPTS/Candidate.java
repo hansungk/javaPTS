@@ -7,17 +7,17 @@ import com.googlecode.javacv.cpp.opencv_core.CvPoint;
 
 public class Candidate {
 	
-	public List<Simple> centers;
+	public List<BallInfo> centers;
 
 	int numOfMissingBlobs = 0;
 	//int disturbed=0;
 	public boolean justMissedABlob;
 
 	// The last stored center
-	Simple currentCenter;
+	BallInfo currentCenter;
 	// The next expected point where the ball should appear in the next frame,
 	// when assuming the ball lies in straight line with constant velocity
-	Simple nextCenter;
+	BallInfo nextCenter;
 
 	// Amount of x, y center coordinates shifted compared to the previous center
 	int x_shift;
@@ -33,16 +33,16 @@ public class Candidate {
 	boolean survive = false;
 
 	Candidate() {
-		centers = new ArrayList<Simple>();
+		centers = new ArrayList<BallInfo>();
 		// Randomly initialize two Centers
-		currentCenter = new Simple(new CvPoint(0, 0));
-		nextCenter = new Simple(new CvPoint(0, 0));
+		currentCenter = new BallInfo(new CvPoint(0, 0));
+		nextCenter = new BallInfo(new CvPoint(0, 0));
 		survive = false;
 	}
 
-	Candidate(Info i) {
+	Candidate(BlobInfo i) {
 		this();
-		add(new Simple(new CvPoint(i.xcenter(),i.ycenter()),i.count));
+		add(new BallInfo(new CvPoint(i.xcenter(),i.ycenter()),i.count));
 		update();
 	}
 	
@@ -57,13 +57,13 @@ public class Candidate {
 		this.survive = cd.survive;
 		
 		// Clone center
-		for (Simple s : cd.centers) {
-			centers.add(new Simple(s));
+		for (BallInfo s : cd.centers) {
+			centers.add(new BallInfo(s));
 		}
 		//
 		
-		this.currentCenter = new Simple(new CvPoint(cd.currentCenter.x(), cd.currentCenter.y()), cd.currentCenter.count);
-		this.nextCenter = new Simple(new CvPoint(cd.nextCenter.x(), cd.nextCenter.y()), cd.nextCenter.count);
+		this.currentCenter = new BallInfo(new CvPoint(cd.currentCenter.x(), cd.currentCenter.y()), cd.currentCenter.count);
+		this.nextCenter = new BallInfo(new CvPoint(cd.nextCenter.x(), cd.nextCenter.y()), cd.nextCenter.count);
 		
 		this.x_shift = cd.x_shift;
 		this.y_shift = cd.y_shift;
@@ -73,7 +73,7 @@ public class Candidate {
 		// new
 	}
 	
-	public void add(Simple toAdd) {
+	public void add(BallInfo toAdd) {
 		centers.add(toAdd);
 		update();
 	}
@@ -87,7 +87,7 @@ public class Candidate {
 
 		// Assume ball is flying in straight line with const speed
 		CvPoint cp = new CvPoint(currentCenter.x() + x_shift, currentCenter.y() + y_shift);
-		Simple toAdd = new Simple(cp, 10); // Why 10?????????????
+		BallInfo toAdd = new BallInfo(cp, 10); // Why 10?????????????
 		add(toAdd); // auto-updated
 		
 		//disturbed++;
@@ -162,21 +162,21 @@ public class Candidate {
 	}
 }
 
-class Simple {
+class BallInfo {
 	CvPoint ctr;
 	int count;
 	
-	Simple(Simple toClone) {
+	BallInfo(BallInfo toClone) {
 		ctr = new CvPoint(toClone.ctr.x(), toClone.ctr.y());
 		this.count = toClone.count;
 	}
 	
-	Simple(CvPoint p) {
+	BallInfo(CvPoint p) {
 		this.ctr = p;
 		this.count = 0;
 	}
 
-	Simple(CvPoint p, int i) {
+	BallInfo(CvPoint p, int i) {
 		this.ctr = p;
 		this.count = i;
 	}

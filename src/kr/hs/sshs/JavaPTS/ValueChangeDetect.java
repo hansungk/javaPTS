@@ -6,7 +6,7 @@ import static com.googlecode.javacv.cpp.opencv_imgproc.*;
 import com.googlecode.javacv.cpp.opencv_core.CvSize;
 import com.googlecode.javacv.cpp.opencv_core.IplImage;
 
-public class SatChangeDetect {
+public class ValueChangeDetect {
 
 	static IplImage prev, next;
 	static int /*h_thresh = 100, s_thresh = 160,*/ v_thresh=350, singlethresh=40;
