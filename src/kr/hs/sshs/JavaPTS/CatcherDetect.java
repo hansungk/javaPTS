@@ -10,7 +10,7 @@ import com.googlecode.javacv.cpp.opencv_core.CvSize;
 
 public class CatcherDetect {
 	
-	final static int rW=30, rH=36;
+	final static int rW=30, rH=33;
 	static int[][] roi = new int[rW][rH];
 	static int linethresh=9;
 	static List<CvPoint> centers;
@@ -134,6 +134,7 @@ public class CatcherDetect {
 				//too much missing upper line -> notCatcher
 				if(m<=k-5){
 					notCatcher=true;
+					k-=5;
 					//System.out.println("cut");
 					break;
 				}
@@ -159,6 +160,7 @@ public class CatcherDetect {
 				//too much missing upper line -> notCatcher
 				if(m<=k-5){
 					notCatcher=true;
+					k-=5;
 					//System.out.println("cut");
 					break;
 				}
@@ -193,8 +195,8 @@ public class CatcherDetect {
 				continue;
 			}
 			
-			if(Math.abs(rEnd[n]-rEnd[0]-lEnd[0]+lEnd[k])>4){
-				System.out.println("shape not so symmetric");
+			if(Math.abs(rEnd[n]-rEnd[0]-lEnd[0]+lEnd[k])>5){
+				//System.out.println("shape not so symmetric");
 				continue;
 			}
 			
