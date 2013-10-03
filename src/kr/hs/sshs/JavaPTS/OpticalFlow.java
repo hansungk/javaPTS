@@ -1,14 +1,6 @@
 package kr.hs.sshs.JavaPTS;
 
-import static com.googlecode.javacv.cpp.opencv_core.CV_RGB;
-import static com.googlecode.javacv.cpp.opencv_core.CV_TERMCRIT_EPS;
-import static com.googlecode.javacv.cpp.opencv_core.CV_TERMCRIT_ITER;
-import static com.googlecode.javacv.cpp.opencv_core.IPL_DEPTH_32F;
-import static com.googlecode.javacv.cpp.opencv_core.cvCreateImage;
-import static com.googlecode.javacv.cpp.opencv_core.cvGetSize;
-import static com.googlecode.javacv.cpp.opencv_core.cvLine;
-import static com.googlecode.javacv.cpp.opencv_core.cvSize;
-import static com.googlecode.javacv.cpp.opencv_core.cvTermCriteria;
+import static com.googlecode.javacv.cpp.opencv_core.*;
 import static com.googlecode.javacv.cpp.opencv_imgproc.cvFindCornerSubPix;
 import static com.googlecode.javacv.cpp.opencv_imgproc.cvGoodFeaturesToTrack;
 import static com.googlecode.javacv.cpp.opencv_video.CV_LKFLOW_INITIAL_GUESSES;
@@ -18,7 +10,6 @@ import static com.googlecode.javacv.cpp.opencv_video.cvCalcOpticalFlowPyrLK;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.googlecode.javacv.cpp.opencv_core.CvPoint;
 import com.googlecode.javacv.cpp.opencv_core.CvPoint2D32f;
 import com.googlecode.javacv.cpp.opencv_core.CvSize;
 import com.googlecode.javacv.cpp.opencv_core.IplImage;
@@ -27,12 +18,10 @@ public class OpticalFlow {
 	// / Image size
 	static CvSize _size;
 
-	// / IplImage variables
-	IplImage imgResult; // Result image
-
 	/**
 	 * Process optical flow calculation from 2 successive frames<br>
 	 * and a Pyramid image to be used in the L-K method.<br>
+	 * (NOTE: video version, uses flag)
 	 * @param imgPrev		8-bit single channel image of prev frame
 	 * @param imgCurr		8-bit single channel image of curr frame
 	 * @param imgPyrA		32-bit single channel image used to store and compute pyramid from prev frame<br>
@@ -42,7 +31,7 @@ public class OpticalFlow {
 	 * 						false: will cvCreateImage a new one
 	 * @return Returns the movement vector of the background in the form of double[] {xshift, yshift}
 	 */
-	public double[] processOpticalFlow(IplImage imgPrev, IplImage imgCurr, IplImage imgPyrA, boolean isPyrANeeded) {
+	public double[] processOpticalFlow(IplImage imgPrev, IplImage imgCurr, IplImage imgPyrA, IplImage imgPyrB, boolean isPyrANeeded) {
 		CvSize _winSize = new CvSize(10,10);
 
 		_size=cvGetSize(imgPrev);
@@ -65,6 +54,8 @@ public class OpticalFlow {
 				0.1,
 				null, 3, 0, 0.04
 				);
+		cvReleaseImage(imgEig);
+		cvReleaseImage(imgTemp);
 		System.out.println("# of corners: " + cornerCount[0]);
 		//System.out.println(m.doubleArrayToString(cornersA.get()));
 
@@ -85,7 +76,7 @@ public class OpticalFlow {
 		float[] featureErrors = new float[cornerCount[0]];
 
 		if(isPyrANeeded) imgPyrA = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
-		IplImage imgPyrB = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
+		imgPyrB = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
 
 		cvCalcOpticalFlowPyrLK(
 				imgPrev,
@@ -102,6 +93,9 @@ public class OpticalFlow {
 				cvTermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, .3),
 				CV_LKFLOW_PYR_A_READY | CV_LKFLOW_INITIAL_GUESSES
 				);
+		cvReleaseImage(imgPyrA);	// imgPyrA will never be used again (almost)
+									// imgPyrB will be used as imgPyrA' in the next call
+									// Release of imgCurr and imgPrev will be taken care by the caller
 		System.out.println("CornerB: " + cornersB.get().length);
 
 		// Show what we are looking at
@@ -114,8 +108,6 @@ public class OpticalFlow {
 			double p0y = cornersA.get()[2*i+1];
 			double p1x = cornersB.get()[2*i];
 			double p1y = cornersB.get()[2*i+1];
-			CvPoint p0 = new CvPoint((int)p0x, (int)p0y);
-			CvPoint p1 = new CvPoint((int)p1x, (int)p1y);
 
 			//System.out.print("Status of " + (i+1) + " [" + p0.x() + "," + p0.y() + "]	: " + status[i]);
 			if (status[i]==0) { 
@@ -128,8 +120,7 @@ public class OpticalFlow {
 				System.out.println();
 				successAPointsL.add(new Vector(p0x, p0y));
 				successBPointsL.add(new Vector(p1x, p1y));
-			}							
-			cvLine(imgResult, p0, p1, CV_RGB(0, 255, 0), 2, 0, 0);
+			}
 		}
 
 		/// Calculation
