@@ -15,6 +15,7 @@ import com.googlecode.javacv.FFmpegFrameRecorder;
 import com.googlecode.javacv.FrameGrabber;
 import com.googlecode.javacv.FrameGrabber.Exception;
 import com.googlecode.javacv.FrameRecorder;
+import com.googlecode.javacv.cpp.opencv_core.CvPoint;
 import com.googlecode.javacv.cpp.opencv_core.CvSize;
 import com.googlecode.javacv.cpp.opencv_core.IplImage;
 
@@ -67,7 +68,6 @@ public class Main {
 
 	/// Flags
 	static char flag_BW = 'x';	// whether to display only BW image
-	static boolean flag_VirginDKey = true;	// whether current frame >= 2 (changed only once)
 	static boolean flag_D_Pressed = false;
 
 	/// Indicates whether a candidate is found
@@ -80,11 +80,18 @@ public class Main {
 	int[][] binary;
 
 	/// Stores all Candidate objects
-	List<Candidate> ballCandidates = new ArrayList<Candidate>();// candidate storage
-	Candidate detectedball;
+	List<Candidate>	ballCandidates = new ArrayList<Candidate>();// candidate storage
+	Candidate		detectedball;
 	
-	static BallInfo ballfinal = new BallInfo(new CvPoint(cropsize,cropsize));
-	static CvRect ballcrop;
+	static BallInfo	ballfinal = new BallInfo(new CvPoint(cropsize,cropsize));
+	static CvRect	ballcrop;
+	
+	/// Final and initial data of the thrown ball
+	CvPoint			caughtBallCtr;
+	
+	/// IplImage and its candidates of the frame in which the ball starts to fly
+	List<IplImage>	imgFirstThrownWannabes;
+	IplImage		imgFirstThrown;
 	
 	/*
 	 * Optimized color threshold examples
@@ -107,8 +114,9 @@ public class Main {
 
 		Main m = new Main();
 
+		/// Initialization
 		// Initialize canvases
-		canvas1 = new CanvasFrame("result", CV_WINDOW_AUTOSIZE);
+		//canvas1 = new CanvasFrame("result", CV_WINDOW_AUTOSIZE);
 		canvas2 = new CanvasFrame("blackwhite", CV_WINDOW_AUTOSIZE);
 		canvas3 = new CanvasFrame("ball", CV_WINDOW_AUTOSIZE);
 		canvas4 = new CanvasFrame("Candidates", CV_WINDOW_AUTOSIZE);
@@ -137,13 +145,17 @@ public class Main {
 		m.imgBW_prev = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		m.imgBall = cvCreateImage(_size,IPL_DEPTH_8U,1);
 		cvCopy(grab(), m.imgTmpl_prev);
-
 		m.imgCandidate = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		m.imgSobel = cvCreateImage(_size, IPL_DEPTH_8U,1);
 		m.imgPyrA = cvCreateImage(_size,IPL_DEPTH_32F,1);
+		m.imgPyrB = cvCreateImage(_size,IPL_DEPTH_32F,1);
 		//m.imgMorphSobel = cvCreateImage(_size, IPL_DEPTH_8U,1);
 		//m.imgCropped = cvCreateImage(_size, IPL_DEPTH_8U,1);
 		//m.imgMorph = cvCreateImage(_size,IPL_DEPTH_8U,1);
+		
+		// Initialize variables used in decision
+		m.caughtBallCtr = new CvPoint(-1, -1);	// -1 means no ball was caught yet
+		m.imgFirstThrownWannabes = new ArrayList<IplImage>();
 
 		while (true) {
 			m.imgTmpl = cvCreateImage(_size, IPL_DEPTH_8U, 3);;
@@ -151,7 +163,6 @@ public class Main {
 
 			cvCopy(grab(), m.imgTmpl);
 			cvSmooth(m.imgTmpl, m.imgTmpl, CV_GAUSSIAN, 3);
-
 			
 			// Process image!
 			m.process();
@@ -182,7 +193,7 @@ public class Main {
 
 			flag_BW = 'x';
 			// Read user key input and do the following
-			KeyEvent key = canvas1.waitKey(0);
+			KeyEvent key = canvas2.waitKey(0);
 			if (key != null) {
 				if ( key.getKeyChar() == 27 ) {
 					m.cvReleaseAllLoop();	
@@ -232,8 +243,7 @@ public class Main {
 		recorder.stop();
 		recorder.release();
 		grabber.stop();
-		grabber.release();
-		canvas1.dispose();		
+		grabber.release();	
 		canvas2.dispose();
 		canvas3.dispose();
 		canvas4.dispose();	
@@ -253,7 +263,7 @@ public class Main {
 	}
 
 	public static void pause() throws InterruptedException {
-		canvas1.waitKey(0);
+		canvas2.waitKey(0);
 	}
 
 	public static void moveToFrame() throws com.googlecode.javacv.FrameGrabber.Exception {
@@ -323,7 +333,7 @@ public class Main {
 		
 		Blob_Labeling bl;
 		List<BlobInfo> blobs;
-		IplImage imgRecovery;
+//		IplImage imgRecovery;
 		
 		cvCanny(imgBW,imgSobel,80,200,3);
 
@@ -338,12 +348,12 @@ public class Main {
 			OpticalFlow opflow = new OpticalFlow();
 			scd = new ValueChangeDetect();
 			
-			// Memory management TODO
-			// You'll never want to initialize imgPyrA
-			if(flag_VirginDKey) {
-				CvSize _pyrSize = new CvSize(_size.width()+8, _size.height()/3+1);
-				imgPyrB = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
-			}
+			// Memory management
+//			// You'll never want to initialize imgPyrA
+//			if(flag_VirginDKey) {
+//				CvSize _pyrSize = new CvSize(_size.width()+8, _size.height()/3+1);
+//				//imgPyrB = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
+//			}
 			if(flag_D_Pressed) {
 				imgPyrA = imgPyrB;
 			}
@@ -419,12 +429,12 @@ public class Main {
 					
 					if (cc.xROImin() < blob.xcenter() && cc.xROImax() > blob.xcenter() && cc.yROImin()<blob.ycenter() && cc.yROImax() > blob.ycenter()) { //ROI Thresholding
 						//System.out.println("Appending!!!!!!!!!!! in Candidate" + q);
-						if (cc.centers.get(cc.centers.size()-1).count<40 || cc.countmin() < blob.count && cc.countmax() > blob.count) { //Size Thresholding : if blob is small, no application of size threshold
+						if (cc.centers.get(cc.centers.size()-1).pixelcount<40 || cc.countmin() < blob.count && cc.countmax() > blob.count) { //Size Thresholding : if blob is small, no application of size threshold
 							//if(cc.disturbed==2)
 								//cc.disturbed=0;
 							//else if(cc.disturbed==1)
-								//cc.disturbed++;
-								cc.numOfMissingBlobs = 0;
+							// cc.disturbed++;
+							cc.numOfMissingBlobs = 0;
 							addedBlob = true;
 							ballCandidates.add(new Candidate(cc));
 							//System.out.println("THERE ARE " + ballCandidates.size() + " CANDIDATES");
@@ -442,16 +452,18 @@ public class Main {
 								drawBall();
 								System.out.println("BALL WAS CAUGHT /nf");
 								//System.out.println("The Speed of Pitch is " + 1503/detectedball.centers.size() + "km/h");
-								ballfinal=detectedball.centers.get(detectedball.centers.size()-1);
+								ballfinal=detectedball.centers.get(detectedball.centers.size()-1); // last ball in the "elected" ball candidate
+								caughtBallCtr = ballfinal.ctr;
 								ValueChangeDetect.v_thresh=350;
 								ValueChangeDetect.singlethresh=40;
 								balldetermined=false;
 							}
 						}
-						else
+						else {
 							// Do nothing, let this blob get removed (not added)
 							ballCandidates.add(new Candidate(cc)); // auto-updated
 							ballCandidates.get(ballCandidates.size()-1).addMissed();
+						}
 							
 					} else {
 						// Non-ball candidate blob jumping : Do nothing, let this blob removed (not added)
@@ -463,7 +475,7 @@ public class Main {
 			}
 			
 			if(ballCandidates.size()==0){
-				balldetermined=false;
+				balldetermined=false;	// Of course!
 			}
 			
 			for (Candidate cc : ballCandidates) {
@@ -489,14 +501,17 @@ public class Main {
 				ValueChangeDetect.v_thresh = (255-avg);
 				
 				//System.out.println("BALL IS DETERMINED");
-
 			}
+			
 			// Finding the FIRST ball
 			if(!balldetermined){
 				for (BlobInfo blob : blobs) {
 					if (blob.count>=45) {
 						ballCandidates.add(new Candidate(blob)); //New Candidate
 						//System.out.println("NEW CANDIDATE WAS CREATED");
+						
+						// Could be the first ball of when ball is thrown
+						imgFirstThrownWannabes.add(imgBW);
 					}
 				}
 			}
@@ -511,29 +526,26 @@ public class Main {
 
 			/// BLOB STAMPING
 			// Stamp blobs list onto imgRecovery
-			// (Doesn't need any IplImage variable)
-			imgRecovery = cvCreateImage(_size, IPL_DEPTH_8U, 1);
-
-			for (int y = 0; y<height; y++) {
-				for (int x = 0; x<width; x++) {
-					cvSetReal2D(imgRecovery, y, x, 0);
-				}
-			}
-
-			/*for (Info i : blobs) {
-				for (CvPoint p : i.points) {
-					// System.out.println("Point : " + p.x() + ", " + p.y());
-					cvSetReal2D(imgRecovery, p.y(), p.x(), 255);
-				}
-			}*/
-
-			// cvCopy(imgRecovery, imgCD);
-			cvCopy(imgRecovery, imgResult);
-			cvReleaseImage(imgRecovery);
-			/// BLOB STAMPING END
-			
-			// D key is no more virgin
-			flag_VirginDKey = false;
+//			// (Doesn't need any IplImage variable)
+//			imgRecovery = cvCreateImage(_size, IPL_DEPTH_8U, 1);
+//
+//			for (int y = 0; y<height; y++) {
+//				for (int x = 0; x<width; x++) {
+//					cvSetReal2D(imgRecovery, y, x, 0);
+//				}
+//			}
+//
+//			/*for (Info i : blobs) {
+//				for (CvPoint p : i.points) {
+//					// System.out.println("Point : " + p.x() + ", " + p.y());
+//					cvSetReal2D(imgRecovery, p.y(), p.x(), 255);
+//				}
+//			}*/
+//
+//			// cvCopy(imgRecovery, imgCD);
+//			cvCopy(imgRecovery, imgResult);
+//			cvReleaseImage(imgRecovery);
+			/// BLOB STAMPING END			
 		break;
 
 		default : // Do nothing
@@ -544,7 +556,6 @@ public class Main {
 	}
 	
 	/**
-	* 
 	* BLOB FILTERING
 	* Search for points in the square box near a blob --
 	* if there is any, that blob is not likely the ball.
