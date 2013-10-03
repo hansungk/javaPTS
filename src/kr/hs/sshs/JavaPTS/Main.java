@@ -446,11 +446,11 @@ public class Main {
 								balldetermined=false;
 							}
 						}
-						else
+						else{
 							// Do nothing, let this blob get removed (not added)
 							ballCandidates.add(new Candidate(cc)); // auto-updated
 							ballCandidates.get(ballCandidates.size()-1).addMissed();
-							
+						}
 					} else {
 						// Non-ball candidate blob jumping : Do nothing, let this blob removed (not added)
 						//System.out.println("Candidate deletion by missing blob");			
