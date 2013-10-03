@@ -50,7 +50,8 @@ public class Main {
 	IplImage imgSobel; //Sobel Image
 	IplImage imgCropped;
 	IplImage imgTemp;
-	IplImage imgPyr;
+	IplImage imgPyrA;
+	IplImage imgPyrB;
 	//IplImage imgMorph;
 	//IplImage imgMorphSobel;
 
@@ -63,8 +64,9 @@ public class Main {
 	/// Current frame number
 	static int framecount = 1;
 
-	/// Flag to determine whether only display BW image
-	static char flag_BW = 'x';
+	/// Flags
+	static char flag_BW = 'x';	// whether to display only BW image
+	static char flag_;
 
 	/// Indicates whether a candidate is found
 	static boolean balldetermined = false;
@@ -77,7 +79,7 @@ public class Main {
 	int[][] binary;
 
 	/// Stores all Candidate objects
-	List<Candidate> ballCandidates = new ArrayList<Candidate>();//Candidate Storage
+	List<Candidate> ballCandidates = new ArrayList<Candidate>();// candidate storage
 	Candidate detectedball;
 	
 	static Simple ballfinal = new Simple(new CvPoint(cropsize,cropsize));
@@ -136,7 +138,7 @@ public class Main {
 
 		m.imgCandidate = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		m.imgSobel = cvCreateImage(_size, IPL_DEPTH_8U,1);
-		m.imgPyr = cvCreateImage(_size,IPL_DEPTH_32F,1);
+		m.imgPyrA = cvCreateImage(_size,IPL_DEPTH_32F,1);
 		//m.imgMorphSobel = cvCreateImage(_size, IPL_DEPTH_8U,1);
 		//m.imgCropped = cvCreateImage(_size, IPL_DEPTH_8U,1);
 		//m.imgMorph = cvCreateImage(_size,IPL_DEPTH_8U,1);
@@ -309,11 +311,8 @@ public class Main {
 		cvCvtColor(imgTmpl, imgBW, CV_RGB2GRAY);
 		
 		binary = new int[width][height];
-
-		///cvSetImageCOI(imgResult, 0);
 		
 		/// Color threshold
-		//cvSetImageCOI(imgHSV, 0);
 		IplImage imgColor = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		cvCvtColor(imgTmpl, imgHSV, CV_BGR2HSV);
 		cvInRangeS(imgHSV, min, max, imgColor);
@@ -323,13 +322,7 @@ public class Main {
 		List<Info> blobs;
 		IplImage imgRecovery;
 		
-		//cvMorphologyEx(imgBW, imgMorph, null, null, CV_MOP_OPEN, 1);
-		
-		//cvSmooth(imgBW, imgBW, CV_GAUSSIAN, 7);
 		cvCanny(imgBW,imgSobel,80,200,3);
-		//cvCanny(imgMorph,imgMorphSobel,80,200,3);
-		
-		
 
 		switch (flag_BW) {
 		case 'c' :
@@ -339,12 +332,10 @@ public class Main {
 			binary = scd.detectChange();
 		break;
 		case 'd' :
-			Main_OpticalFlow flow = new Main_OpticalFlow();
-			
+			OpticalFlow opflow = new OpticalFlow();			
 			scd = new SatChangeDetect();
 			
-			
-			double[] shift = flow.processOpticalFlow(imgBW_prev, imgBW, imgPyr, isPyrNeeded);
+			double[] shift = opflow.processOpticalFlow(imgBW_prev, imgBW, imgPyrA, imgPyrB, isPyrNeeded);
 			SatChangeDetect.mX=(int)Math.round(shift[0]);
 			SatChangeDetect.mY=(int)Math.round(shift[1]);
 			System.out.println(SatChangeDetect.mX + " and " + SatChangeDetect.mY);
@@ -377,7 +368,6 @@ public class Main {
 			}
 			// BLOB CROSSING END
 			*/
-
 
 			/// BLOB LABELING
 			bl = new Blob_Labeling();
