@@ -32,6 +32,7 @@ public class Main {
 	//static CanvasFrame canvas7;
 	//static CanvasFrame canvas8;
 	static CanvasFrame canvas9;
+	//static CanvasFrame canvas10;
 
 	/// FFmpeg variables
 	static FrameGrabber grabber;
@@ -49,6 +50,7 @@ public class Main {
 	IplImage imgSobel; //Sobel Image
 	IplImage imgCropped;
 	IplImage imgTemp;
+	//IplImage imgTemp2;
 	IplImage imgPyrA;	// PREV pyramid
 	IplImage imgPyrB;	// CURR pyramid
 	//IplImage imgMorph;
@@ -66,8 +68,7 @@ public class Main {
 	/// Flags
 	static char flag_BW = 'x';	// whether to display only BW image
 	static boolean flag_VirginDKey = true;	// whether current frame >= 2 (changed only once)
-	static boolean flag_FrameJumped = true;		// whether frame is jumped, so there is no 'prev frame' to refer to
-												// also applies at the very start of the video
+	static boolean flag_D_Pressed = false;
 
 	/// Indicates whether a candidate is found
 	static boolean balldetermined = false;
@@ -116,6 +117,7 @@ public class Main {
 		//canvas7 = new CanvasFrame("Morphology",CV_WINDOW_AUTOSIZE);
 		//canvas8 = new CanvasFrame("MorphSobel", CV_WINDOW_AUTOSIZE);
 		canvas9 = new CanvasFrame("VCD",CV_WINDOW_AUTOSIZE);
+		//canvas10 = new CanvasFrame("noFlow",CV_WINDOW_AUTOSIZE);
 
 		// Initialize FrameRecorder/FrameGrabber
 		recorder = new FFmpegFrameRecorder(PATH + "video/trash.mp4", 640, 480);
@@ -150,6 +152,7 @@ public class Main {
 			cvCopy(grab(), m.imgTmpl);
 			cvSmooth(m.imgTmpl, m.imgTmpl, CV_GAUSSIAN, 3);
 
+			
 			// Process image!
 			m.process();
 			
@@ -173,11 +176,11 @@ public class Main {
 			//canvas7.showImage(m.imgMorph);
 			//canvas8.showImage(m.imgMorphSobel);
 			canvas9.showImage(m.imgTemp);
+			//canvas10.showImage(m.imgTemp2);
 
 			System.out.println("############## FRAME " + framecount + " ##############");
 
 			flag_BW = 'x';
-			flag_FrameJumped = false;
 			// Read user key input and do the following
 			KeyEvent key = canvas1.waitKey(0);
 			if (key != null) {
@@ -185,33 +188,37 @@ public class Main {
 					m.cvReleaseAllLoop();	
 					break;
 				} else if	(key.getKeyCode() == KeyEvent.VK_TAB) { // FFW 20 frames
-					flag_FrameJumped = true;
 					m.cvReleaseAllLoop();	
 					// pass 19 frame
 					for (int i=0; i<19; i++)
 						grab();
 					continue;
 				} else if (key.getKeyCode() == KeyEvent.VK_P ) { // Take screenshot
+					flag_D_Pressed=false;
 					cvSaveImage(PATH + "screenshot.jpg", m.imgBW);
 					System.out.println("Saved screenshot!");
 				} else if (key.getKeyCode() == KeyEvent.VK_1 ) { // Take screenshot
+					flag_D_Pressed=false;
 					cvSaveImage(PATH + "ssA.jpg", m.imgBW);
 					System.out.println("Saved as ssA.jpg");
 				} else if (key.getKeyCode() == KeyEvent.VK_2 ) { // Take screenshot
+					flag_D_Pressed=false;
 					cvSaveImage(PATH + "ssB.jpg", m.imgBW);
 					System.out.println("Saved as ssB.jpg");
 				} else if (key.getKeyCode() == KeyEvent.VK_R) { // Record frames in an .avi file
 					recorder.record(m.imgResult);
 				} else if (key.getKeyCode() == KeyEvent.VK_F) { // FFW 2 frames
-					flag_FrameJumped = true;
+					flag_D_Pressed=false;
 					m.cvReleaseAllLoop();	
 					grab();
 				} else if (key.getKeyCode() == KeyEvent.VK_C) {
+					flag_D_Pressed=false;
 					flag_BW = 'c';
 				} else if (key.getKeyCode() == KeyEvent.VK_D) {
+					flag_D_Pressed=false;
 					flag_BW = 'd';
 				} else if (key.getKeyCode() == KeyEvent.VK_J) {	// Go to desired frame
-					flag_FrameJumped = true;
+					flag_D_Pressed=false;
 					m.cvReleaseAllLoop();	
 					moveToFrame();
 				}
@@ -235,6 +242,7 @@ public class Main {
 		//canvas7.dispose();
 		//canvas8.dispose();
 		canvas9.dispose();
+		//canvas10.dispose();
 		
 		System.out.println("(TERMINATED)");
 	}
@@ -308,6 +316,7 @@ public class Main {
 		imgResult = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		imgSobel = cvCreateImage(_size,IPL_DEPTH_8U,1);
 		imgTemp = cvCreateImage(_size,IPL_DEPTH_8U,1);
+		//imgTemp2 = cvCreateImage(_size,IPL_DEPTH_8U,1);
 		cvCvtColor(imgTmpl, imgBW, CV_RGB2GRAY);
 		
 		binary = new int[width][height];
@@ -328,22 +337,33 @@ public class Main {
 		case 'd' :
 			OpticalFlow opflow = new OpticalFlow();			
 			scd = new SatChangeDetect();
+			/*SatChangeDetect.mX=0;
+			SatChangeDetect.mY=0;
+			scd.initialize(imgTmpl_prev, imgTmpl);
+			binary = scd.detectChange();
+			for(int x = 0; x<width; x++){
+				for(int y = 0; y<height; y++){
+					if(binary[x][y]==0) cvSetReal2D(imgTemp2,y,x,0);
+					else cvSetReal2D(imgTemp2,y,x,255);
+				}
+			}*/
 			
 			// Memory management TODO
 			// You'll never want to initialize imgPyrA
 			if(flag_VirginDKey) {
-				flag_FrameJumped = true;
 				CvSize _pyrSize = new CvSize(_size.width()+8, _size.height()/3+1);
 				imgPyrB = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
 			}
-			System.out.println("Current flag_FrameJumped: " + flag_FrameJumped);
-			if(!flag_FrameJumped) {
+			if(flag_D_Pressed) {
 				imgPyrA = imgPyrB;
 			}
-			double[] shift = opflow.processOpticalFlow(imgBW_prev, imgBW, imgPyrA, imgPyrB, flag_FrameJumped);
+			double[] shift = opflow.processOpticalFlow(imgBW_prev, imgBW, imgPyrA, imgPyrB, !flag_D_Pressed);
 			SatChangeDetect.mX=(int)Math.round(shift[0]);
 			SatChangeDetect.mY=(int)Math.round(shift[1]);
 			System.out.println(SatChangeDetect.mX + " and " + SatChangeDetect.mY);
+			
+			//new PyrA is not needed if you process next time
+			flag_D_Pressed = true;
 			
 			/// DETECTING VALUE CHANGE
 			scd.initialize(imgTmpl_prev, imgTmpl);
@@ -775,6 +795,7 @@ public class Main {
 		cvReleaseImage(imgSobel);
 		cvReleaseImage(imgCropped);
 		cvReleaseImage(imgTemp);
+		//cvReleaseImage(imgTemp2);
 		cvReleaseImage(imgPyrA);
 		cvReleaseImage(imgPyrB);
 	}
