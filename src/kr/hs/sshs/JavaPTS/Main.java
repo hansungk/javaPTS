@@ -8,7 +8,6 @@ import java.awt.event.KeyEvent;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Scanner;
-import java.util.Vector;
 
 import com.googlecode.javacv.CanvasFrame;
 import com.googlecode.javacv.FFmpegFrameGrabber;
@@ -40,7 +39,6 @@ public class Main {
 	/// IplImage variables
 	IplImage imgTmpl;	// template image (RGB)
 	IplImage imgTmpl_prev;	// template image - 1 frame ago
-	IplImage imgHSV;	// template image (HSV)
 	IplImage imgBW;		// template blackwhite image
 	IplImage imgBW_prev;
 	IplImage imgBlob;	// Blob detection image
@@ -50,8 +48,8 @@ public class Main {
 	IplImage imgSobel; //Sobel Image
 	IplImage imgCropped;
 	IplImage imgTemp;
-	IplImage imgPyrA;
-	IplImage imgPyrB;
+	IplImage imgPyrA;	// PREV pyramid
+	IplImage imgPyrB;	// CURR pyramid
 	//IplImage imgMorph;
 	//IplImage imgMorphSobel;
 
@@ -66,11 +64,11 @@ public class Main {
 
 	/// Flags
 	static char flag_BW = 'x';	// whether to display only BW image
-	static char flag_;
+	static boolean flag_FrameJumped = true;		// whether frame is jumped, so there is no 'prev frame' to refer to
+												// also applies at the very start of the video
 
 	/// Indicates whether a candidate is found
 	static boolean balldetermined = false;
-	static boolean isPyrNeeded = true;
 
 	/// HSV colorspace threshold
 	static CvScalar min = cvScalar(0, 0, 180, 0);
@@ -184,10 +182,10 @@ public class Main {
 			KeyEvent key = canvas1.waitKey(0);
 			if (key != null) {
 				if ( key.getKeyChar() == 27 ) {
-					m.cvReleaseAll();	
+					m.cvReleaseAllLoop();	
 					break;
 				} else if	(key.getKeyCode() == KeyEvent.VK_TAB) { // FFW 20 frames
-					m.cvReleaseAll();	
+					m.cvReleaseAllLoop();	
 					// pass 19 frame
 					for (int i=0; i<19; i++)
 						grab();
@@ -204,23 +202,23 @@ public class Main {
 				} else if (key.getKeyCode() == KeyEvent.VK_R) { // Record frames in an .avi file
 					recorder.record(m.imgResult);
 				} else if (key.getKeyCode() == KeyEvent.VK_F) { // FFW 2 frames
-					m.cvReleaseAll();	
+					m.cvReleaseAllLoop();	
 					grab();
 				} else if (key.getKeyCode() == KeyEvent.VK_C) {
 					flag_BW = 'c';
 				} else if (key.getKeyCode() == KeyEvent.VK_D) {
 					flag_BW = 'd';
 				} else if (key.getKeyCode() == KeyEvent.VK_J) {
-					m.cvReleaseAll();	
+					m.cvReleaseAllLoop();	
 					moveToFrame();
 				}
 			}
 			// Don't forget to do this!!!
-			m.cvReleaseAll();	
+			m.cvReleaseAllLoop();	
 		}
 
 		// Release resources, dispose grabber/canvas and exit
-		m.cvReleaseAll();
+		m.cvReleaseAllFinal();
 		recorder.stop();
 		recorder.release();
 		grabber.stop();
@@ -251,6 +249,7 @@ public class Main {
 		System.out.print("Move to frame(empty:cancel) : ");
 		Scanner s = new Scanner(System.in);
 		String ui = s.nextLine();
+		s.close();
 		
 		if (!ui.isEmpty()) {
 			int temp = framecount;
@@ -275,7 +274,6 @@ public class Main {
 	public void stretch() {
 		IplImage imgBW = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		cvCvtColor(imgTmpl, imgBW, CV_RGB2GRAY);
-		imgHSV = cvCreateImage(_size, IPL_DEPTH_8U, 3);
 		imgResult = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 
 		// CvHistogram hist = new CvHistogram();
@@ -302,7 +300,6 @@ public class Main {
 		width = imgTmpl.width();
 		height = imgTmpl.height();
 
-		imgHSV = cvCreateImage(_size, IPL_DEPTH_8U, 3);
 		imgBlob = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		imgBW = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		imgResult = cvCreateImage(_size, IPL_DEPTH_8U, 1);
@@ -311,12 +308,6 @@ public class Main {
 		cvCvtColor(imgTmpl, imgBW, CV_RGB2GRAY);
 		
 		binary = new int[width][height];
-		
-		/// Color threshold
-		IplImage imgColor = cvCreateImage(_size, IPL_DEPTH_8U, 1);
-		cvCvtColor(imgTmpl, imgHSV, CV_BGR2HSV);
-		cvInRangeS(imgHSV, min, max, imgColor);
-		/// Color threshold END
 		
 		Blob_Labeling bl;
 		List<Info> blobs;
@@ -335,11 +326,15 @@ public class Main {
 			OpticalFlow opflow = new OpticalFlow();			
 			scd = new SatChangeDetect();
 			
-			double[] shift = opflow.processOpticalFlow(imgBW_prev, imgBW, imgPyrA, imgPyrB, isPyrNeeded);
+			// Memory management
+			if (flag_FrameJumped)	cvReleaseImage(imgPyrB);
+			else 					imgPyrA = imgPyrB;		// update previous imgPyrB to be the new A pyramid
+			
+			double[] shift = opflow.processOpticalFlow(imgBW_prev, imgBW, imgPyrA, imgPyrB, flag_FrameJumped);
 			SatChangeDetect.mX=(int)Math.round(shift[0]);
 			SatChangeDetect.mY=(int)Math.round(shift[1]);
 			System.out.println(SatChangeDetect.mX + " and " + SatChangeDetect.mY);
-			isPyrNeeded = false;
+			flag_FrameJumped = false;
 			/// DETECTING VALUE CHANGE
 			scd.initialize(imgTmpl_prev, imgTmpl);
 			binary = scd.detectChange();
@@ -523,8 +518,6 @@ public class Main {
 			cvCopy(imgBW, imgResult);
 		break;
 		}
-
-		cvReleaseImage(imgColor);
 		// Check Blob Detecting -- end
 	}
 	
@@ -542,8 +535,7 @@ public class Main {
 		// (set 0 for testing)
 		int boxThickness = 20;
 
-
-		int currentLabel = 0; // Label of the current searching blob
+		//int currentLabel = 0; // Label of the current searching blob
 		for (int i = blobs.size() - 1; i > 0 ; i--) { // CAUTION -- No element in blobs.get(0) (background)
 			if (blobs.size() > 0) {
 				// System.out.println("Searching blob number " + (i+1) + "...");
@@ -562,8 +554,7 @@ public class Main {
 				*/
 
 				// Remove the current blob, to get it out of the way
-				currentLabel = i;	
-				
+				//currentLabel = i;	
 
 				// Searching inside the box
 				List<Integer> detectedLabel = new ArrayList<Integer> (); // Labels detected inside the box
@@ -599,7 +590,6 @@ public class Main {
 
 				// Recover the current blob for the next search,
 				// using its own original label (currentLabel)
-				
 			}
 		}
 	}
@@ -742,19 +732,37 @@ public class Main {
 	}
 
 	/**
-	* Release all redundant resources.
+	* Release all redundant resources <b>at the end of the loop.</b>
 	*/
-	public void cvReleaseAll() {
+	public void cvReleaseAllLoop() {
+		// Don't release *_prevs!
 		cvReleaseImage(imgBlob);
-		cvReleaseImage(imgHSV);
 		cvReleaseImage(imgResult);
 		cvReleaseImage(imgBW);
 		cvReleaseImage(imgTmpl);
-		//cvReleaseImage(imgTmpl_prev);
 		cvReleaseImage(imgCandidate);
 		cvReleaseImage(imgSobel);
 		cvReleaseImage(imgCropped);
 		cvReleaseImage(imgTemp);
+	}
+	
+	/**
+	* Release all redundant resources <b>at the termination of the program.</b>
+	*/
+	public void cvReleaseAllFinal() {
+		cvReleaseImage(imgTmpl);
+		cvReleaseImage(imgTmpl_prev);
+		cvReleaseImage(imgBW);
+		cvReleaseImage(imgBW_prev);
+		cvReleaseImage(imgBlob);
+		cvReleaseImage(imgCandidate);
+		cvReleaseImage(imgResult);
+		cvReleaseImage(imgBall);
+		cvReleaseImage(imgSobel);
+		cvReleaseImage(imgCropped);
+		cvReleaseImage(imgTemp);
+		cvReleaseImage(imgPyrA);
+		cvReleaseImage(imgPyrB);
 	}
 	
 	public String doubleArrayToString(double[] ds) {
