@@ -76,9 +76,11 @@ public class OpticalFlow {
 		float[] featureErrors = new float[cornerCount[0]];
 
 		// Memory mangement
-		cvReleaseImage(imgPyrB);	// WHAT D'YA KNOW
 		imgPyrB = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);	// Always shining new baby, BUT DONT RELEASE IT
-		if (isPyrANeeded) imgPyrA = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
+		if (isPyrANeeded) {
+			cvReleaseImage(imgPyrB);
+			imgPyrA = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
+		}
 		
 		cvCalcOpticalFlowPyrLK(
 				imgPrev,
