@@ -1,11 +1,11 @@
 package kr.hs.sshs.JavaPTS;
 
-class Info{
+class BlobInfo {
 
 	int xmin, ymin, xmax, ymax, count;
 	public boolean condition;
 	
-	Info(int xmin, int ymin, int xmax, int ymax, int count) {
+	BlobInfo(int xmin, int ymin, int xmax, int ymax, int count) {
 		condition = false;
 		this.xmin = xmin;
 		this.ymin = ymin;
