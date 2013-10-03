@@ -42,6 +42,7 @@ public class Main {
 	IplImage imgTmpl_prev;	// template image - 1 frame ago
 	IplImage imgHSV;	// template image (HSV)
 	IplImage imgBW;		// template blackwhite image
+	IplImage imgBW_prev;
 	IplImage imgBlob;	// Blob detection image
 	IplImage imgCandidate;	// Candidate image
 	IplImage imgResult;	// result image
@@ -118,7 +119,7 @@ public class Main {
 		recorder = new FFmpegFrameRecorder(PATH + "video/trash.mp4", 640, 480);
 		recorder.setFrameRate(30);
 		recorder.start();
-		grabber = new FFmpegFrameGrabber(PATH + "video/corner.mp4");
+		grabber = new FFmpegFrameGrabber(PATH + "video/5.mp4");
 		grabber.start();
 
 		// Get frame size
@@ -129,12 +130,13 @@ public class Main {
 		// Initialize IplImages
 		// (DO NOT RELEASE THESE --- intialized only 1 time, reused)
 		m.imgTmpl_prev = cvCreateImage(_size, IPL_DEPTH_8U, 3);
+		m.imgBW_prev = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		m.imgBall = cvCreateImage(_size,IPL_DEPTH_8U,1);
 		cvCopy(grab(), m.imgTmpl_prev);
 
 		m.imgCandidate = cvCreateImage(_size, IPL_DEPTH_8U, 1);
 		m.imgSobel = cvCreateImage(_size, IPL_DEPTH_8U,1);
-		m.imgPyr = cvCreateImage(_size,IPL_DEPTH_8U,1);
+		m.imgPyr = cvCreateImage(_size,IPL_DEPTH_32F,1);
 		//m.imgMorphSobel = cvCreateImage(_size, IPL_DEPTH_8U,1);
 		//m.imgCropped = cvCreateImage(_size, IPL_DEPTH_8U,1);
 		//m.imgMorph = cvCreateImage(_size,IPL_DEPTH_8U,1);
@@ -162,6 +164,7 @@ public class Main {
 			CatcherDetect.main(m.imgCropped);
 			
 			cvCopy(m.imgTmpl, m.imgTmpl_prev);
+			cvCopy(m.imgBW, m.imgBW_prev);
 
 			canvas2.showImage(m.imgBW);
 			canvas3.showImage(m.imgBall);
@@ -336,10 +339,12 @@ public class Main {
 			binary = scd.detectChange();
 		break;
 		case 'd' :
-			Main_OpticalFlow flow = new Main_OpticalFlow();
-			SatChangeDetect.mX=(int) flow.processOpticalFlow(imgTmpl_prev, imgTmpl, imgPyr, isPyrNeeded)[0];
-			SatChangeDetect.mY=(int) flow.processOpticalFlow(imgTmpl_prev, imgTmpl, imgPyr, isPyrNeeded)[1];
-			isPyrNeeded = true;
+			//Main_OpticalFlow flow = new Main_OpticalFlow();
+			
+			//double[] shift = flow.processOpticalFlow(imgBW_prev, imgBW, imgPyr, isPyrNeeded);
+			//SatChangeDetect.mX=(int)shift[0];
+			//SatChangeDetect.mY=(int)shift[1];
+			isPyrNeeded = false;
 			/// DETECTING VALUE CHANGE
 			scd = new SatChangeDetect();
 			scd.initialize(imgTmpl_prev, imgTmpl);
@@ -377,18 +382,18 @@ public class Main {
 			binary = bl.print;
 			
 			//Print Blobs After Simple Blob filtering
-			for(int x = 0; x<width; x++){
+			/*for(int x = 0; x<width; x++){
 				for(int y = 0; y<height; y++){
 					if(binary[x][y]==0) cvSetReal2D(imgTemp,y,x,0);
 					else cvSetReal2D(imgTemp,y,x,255);
 				}
-			}
+			}*/
 			/// BLOB LABELING END
 
 			///
 			/// BLOB FILTERING
 			if(!balldetermined)
-				blobFiltering(blobs, 4);
+				blobFiltering(blobs, 3);
 			///
 			///
 

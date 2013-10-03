@@ -98,6 +98,7 @@ public class Main_OpticalFlow {
 	public double[] processOpticalFlow(IplImage imgPrev, IplImage imgCurr, IplImage imgPyrA, boolean isPyrANeeded) {
 		CvSize _winSize = new CvSize(10,10);
 
+		_size=cvGetSize(imgPrev);
 		// Find good features to track
 		IplImage imgEig = cvCreateImage(_size, IPL_DEPTH_32F, 1);
 		IplImage imgTemp = cvCreateImage(_size, IPL_DEPTH_32F, 1);
@@ -258,7 +259,8 @@ public class Main_OpticalFlow {
 			double distance = v.length();
 			int indexTheta = (int)Math.floor((theta - mintheta) / thetaInterval);	// from 0
 			int indexDistance = (int)Math.floor((distance - mindistance) / distanceInterval);	// from 0
-			if(indexDistance == roomsCount) indexDistance--; 
+			if(indexDistance == roomsCount) indexDistance--;
+			if(indexTheta == roomsCount) indexTheta--; 
 			thetaRooms.get(indexTheta).add(v);
 			distanceRooms.get(indexDistance).add(v);
 		}
