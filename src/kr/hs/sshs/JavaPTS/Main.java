@@ -82,7 +82,7 @@ public class Main {
 	List<Candidate> ballCandidates = new ArrayList<Candidate>();// candidate storage
 	Candidate detectedball;
 	
-	static Simple ballfinal = new Simple(new CvPoint(cropsize,cropsize));
+	static BallInfo ballfinal = new BallInfo(new CvPoint(cropsize,cropsize));
 	static CvRect ballcrop;
 	
 	/*
@@ -156,7 +156,7 @@ public class Main {
 			//Crop Image Around the Final Ball Point
 			ballcrop = new CvRect(Math.max(ballfinal.x()-cropsize,0), Math.max(ballfinal.y()-cropsize,0), Math.min(2*cropsize,2*(width-ballfinal.x())), Math.min(2*cropsize,2*(height-ballfinal.y())));
 			
-			//cvSetImageROI(m.imgSobel, ballcrop);
+			cvSetImageROI(m.imgSobel, ballcrop);
 			m.imgCropped = cvCreateImage(cvGetSize(m.imgSobel),IPL_DEPTH_8U,1);
 			cvCopy(m.imgSobel,m.imgCropped);
 			cvResetImageROI(m.imgSobel);
@@ -313,7 +313,7 @@ public class Main {
 		binary = new int[width][height];
 		
 		Blob_Labeling bl;
-		List<Info> blobs;
+		List<BlobInfo> blobs;
 		IplImage imgRecovery;
 		
 		cvCanny(imgBW,imgSobel,80,200,3);
@@ -321,13 +321,13 @@ public class Main {
 		switch (flag_BW) {
 		case 'c' :
 			/// DETECTING VALUE CHANGE
-			SatChangeDetect scd = new SatChangeDetect();
+			ValueChangeDetect scd = new ValueChangeDetect();
 			scd.initialize(imgTmpl_prev, imgTmpl);
 			binary = scd.detectChange();
 		break;
 		case 'd' :
 			OpticalFlow opflow = new OpticalFlow();			
-			scd = new SatChangeDetect();
+			scd = new ValueChangeDetect();
 			
 			// Memory management TODO
 			// You'll never want to initialize imgPyrA
@@ -341,9 +341,9 @@ public class Main {
 				imgPyrA = imgPyrB;
 			}
 			double[] shift = opflow.processOpticalFlow(imgBW_prev, imgBW, imgPyrA, imgPyrB, flag_FrameJumped);
-			SatChangeDetect.mX=(int)Math.round(shift[0]);
-			SatChangeDetect.mY=(int)Math.round(shift[1]);
-			System.out.println(SatChangeDetect.mX + " and " + SatChangeDetect.mY);
+			ValueChangeDetect.mX=(int)Math.round(shift[0]);
+			ValueChangeDetect.mY=(int)Math.round(shift[1]);
+			System.out.println(ValueChangeDetect.mX + " and " + ValueChangeDetect.mY);
 			
 			/// DETECTING VALUE CHANGE
 			scd.initialize(imgTmpl_prev, imgTmpl);
@@ -405,7 +405,7 @@ public class Main {
 				Candidate cc = new Candidate(ballCandidates.get(q));
 				
 				boolean addedBlob = false; // Indicates whether any blob is added to Candidate cc 
-				for (Info blob : blobs) { // FOUND BLOB
+				for (BlobInfo blob : blobs) { // FOUND BLOB
 					
 					if (cc.xROImin() < blob.xcenter() && cc.xROImax() > blob.xcenter() && cc.yROImin()<blob.ycenter() && cc.yROImax() > blob.ycenter()) { //ROI Thresholding
 						//System.out.println("Appending!!!!!!!!!!! in Candidate" + q);
@@ -418,13 +418,12 @@ public class Main {
 							addedBlob = true;
 							ballCandidates.add(new Candidate(cc));
 							//System.out.println("THERE ARE " + ballCandidates.size() + " CANDIDATES");
-							ballCandidates.get(ballCandidates.size()-1).add(new Simple(new CvPoint(blob.xcenter(),blob.ycenter()),blob.count));
+							ballCandidates.get(ballCandidates.size()-1).add(new BallInfo(new CvPoint(blob.xcenter(),blob.ycenter()),blob.count));
 						}
 					}
 				}
 
-				if (!addedBlob) { // NOT FOUND BLOB
-					
+				if (!addedBlob) { // NOT FOUND BLOB					
 					if (balldetermined) { //If this ball is determined
 						if(cc.numOfMissingBlobs > 0){// If ball is considered to be caught
 							if(ballCandidates.size()==1){
@@ -434,13 +433,13 @@ public class Main {
 								System.out.println("BALL WAS CAUGHT /nf");
 								//System.out.println("The Speed of Pitch is " + 1503/detectedball.centers.size() + "km/h");
 								ballfinal=detectedball.centers.get(detectedball.centers.size()-1);
-								SatChangeDetect.v_thresh=350;
-								SatChangeDetect.singlethresh=40;
+								ValueChangeDetect.v_thresh=350;
+								ValueChangeDetect.singlethresh=40;
 								balldetermined=false;
 							}
 						}
 						else
-							// Do nothing, let this blob removed (not added)
+							// Do nothing, let this blob get removed (not added)
 							ballCandidates.add(new Candidate(cc)); // auto-updated
 							ballCandidates.get(ballCandidates.size()-1).addMissed();
 							
@@ -476,15 +475,15 @@ public class Main {
 				int y2=Math.min(height-1,ballCandidates.get(0).yROImax());
 				
 				int avg = ValAverage(new CvPoint(x1,y1), new CvPoint(x2,y2), imgBW);
-				SatChangeDetect.singlethresh = (255-avg)/8;
-				SatChangeDetect.v_thresh = (255-avg);
+				ValueChangeDetect.singlethresh = (255-avg)/8;
+				ValueChangeDetect.v_thresh = (255-avg);
 				
 				//System.out.println("BALL IS DETERMINED");
 
 			}
 			// Finding the FIRST ball
 			if(!balldetermined){
-				for (Info blob : blobs) {
+				for (BlobInfo blob : blobs) {
 					if (blob.count>=45) {
 						ballCandidates.add(new Candidate(blob)); //New Candidate
 						//System.out.println("NEW CANDIDATE WAS CREATED");
@@ -542,7 +541,7 @@ public class Main {
 	* @param blobs Blobs list
 	* @param adjBlobNumThreshold Minimum number of found adjacent blobs required to remove current blob.
 	*/
-	public void blobFiltering(List<Info> blobs, int adjBlobNumThreshold) {
+	public void blobFiltering(List<BlobInfo> blobs, int adjBlobNumThreshold) {
 
 		// Thickness of the searching box, wrapping around each blob
 		// (set 0 for testing)
@@ -553,7 +552,7 @@ public class Main {
 			if (blobs.size() > 0) {
 				// System.out.println("Searching blob number " + (i+1) + "...");
 
-				Info currentBlob = blobs.get(i);
+				BlobInfo currentBlob = blobs.get(i);
 				int x = currentBlob.xcenter();
 				int y = currentBlob.ycenter();
 
@@ -619,7 +618,7 @@ public class Main {
 		}
 		
 		for (int k = 0; k < ballCandidates.size(); k++) {
-			for (Simple pt : ballCandidates.get(k).centers) {
+			for (BallInfo pt : ballCandidates.get(k).centers) {
 				for (int i = -1; i <= 1; i++) {
 					for (int j = -1; j <= 1; j++) {
 						int ydraw = (int)((pt.ctr.y()+i<0)?Math.max(pt.ctr.y()+i,0):Math.min(pt.ctr.y()+i,height-1));
@@ -657,7 +656,7 @@ public class Main {
 			}
 		}
 		
-		for (Simple pt : detectedball.centers) {
+		for (BallInfo pt : detectedball.centers) {
 			for (int i = -1; i <= 1; i++) {
 				for (int j = -1; j <= 1; j++) {
 					int ydraw = (int)((pt.ctr.y()+i<0)?Math.max(pt.ctr.y()+i,0):Math.min(pt.ctr.y()+i,height-1));
@@ -736,8 +735,8 @@ public class Main {
 					//System.out.println("The Speed of Pitch is " + 1080/detectedball.centers.size() + "km/h");
 					ballfinal=detectedball.centers.get(detectedball.centers.size()-1);
 					ballCandidates.remove(0);
-					SatChangeDetect.v_thresh=350;
-					SatChangeDetect.singlethresh=40;
+					ValueChangeDetect.v_thresh=350;
+					ValueChangeDetect.singlethresh=40;
 					balldetermined=false;
 				}
 				else ballCandidates.remove(i);
