@@ -64,6 +64,7 @@ public class Main {
 
 	/// Width and height of original frame
 	static CvSize _size;
+	static CvSize _pyrSize;
 	static int width;
 	static int height;
 	static int cropsize=70;
@@ -158,6 +159,7 @@ public class Main {
 		
 		width = _size.width();
 		height = _size.height();
+		_pyrSize = new CvSize(_size.width()+8, _size.height()/3+1);
 
 		// Initialize IplImages
 		// (DO NOT RELEASE THESE --- intialized only 1 time, reused)
@@ -230,24 +232,22 @@ public class Main {
 			KeyEvent key = canvas2.waitKey(0);
 			if (key != null) {
 				if ( key.getKeyChar() == 27 ) {
-					m.cvReleaseAllLoop();	
+					m.cvReleaseAllLoop();
 					break;
 				} else if	(key.getKeyCode() == KeyEvent.VK_TAB) { // FFW 20 frames
+					flag_D_Pressed=false;
 					m.cvReleaseAllLoop();	
 					// pass 19 frame
 					for (int i=0; i<19; i++)
 						grab();
 					continue;
 				} else if (key.getKeyCode() == KeyEvent.VK_P ) { // Take screenshot
-					flag_D_Pressed=false;
 					cvSaveImage(PATH + "screenshot.jpg", m.imgBW);
 					System.out.println("Saved screenshot!");
 				} else if (key.getKeyCode() == KeyEvent.VK_1 ) { // Take screenshot
-					flag_D_Pressed=false;
 					cvSaveImage(PATH + "ssA.jpg", m.imgBW);
 					System.out.println("Saved as ssA.jpg");
 				} else if (key.getKeyCode() == KeyEvent.VK_2 ) { // Take screenshot
-					flag_D_Pressed=false;
 					cvSaveImage(PATH + "ssB.jpg", m.imgBW);
 					System.out.println("Saved as ssB.jpg");
 				} else if (key.getKeyCode() == KeyEvent.VK_R) { // Record frames in an .avi file
@@ -257,10 +257,8 @@ public class Main {
 					m.cvReleaseAllLoop();	
 					grab();
 				} else if (key.getKeyCode() == KeyEvent.VK_C) {
-					flag_D_Pressed=false;
 					flag_BW = 'c';
 				} else if (key.getKeyCode() == KeyEvent.VK_D) {
-					flag_D_Pressed=false;
 					flag_BW = 'd';
 				} else if (key.getKeyCode() == KeyEvent.VK_J) {	// Go to desired frame
 					flag_D_Pressed=false;
@@ -380,8 +378,10 @@ public class Main {
 			if(flag_D_Pressed) {
 				imgPyrA = imgPyrB;
 			}
-			double[] shift = opflow.processOpticalFlow(imgBW_prev, imgBW, imgPyrA, imgPyrB, flag_OpflowInitiated?2:(flag_D_Pressed?0:1));
-			flag_OpflowInitiated = false;
+			System.out.println("FLAG:" + flag_D_Pressed);
+			boolean isRelated = flag_D_Pressed;
+			double[] shift = opflow.processOpticalFlow(imgBW_prev, imgBW, imgPyrA, imgPyrB, isRelated);
+			flag_OpflowInitiated = true;
 			ValueChangeDetect.mX=(int)Math.round(shift[0]);
 			ValueChangeDetect.mY=(int)Math.round(shift[1]);
 			System.out.println(ValueChangeDetect.mX + " and " + ValueChangeDetect.mY);
@@ -823,8 +823,12 @@ public class Main {
 		for (IplImage il : imgFramesBetweenCatches)	cvReleaseImage(il);
 		imgFramesBetweenCatches.clear();
 		
-		IplImage imgPyrA=null, imgPyrB=null;
-		double[] shift = opflow.processOpticalFlow(imgFirstThrown, imgFinalCaught, imgPyrA, imgPyrB, 2);
+		IplImage imgPyrA, imgPyrB;	// Use separate pyramid values, to avoid contaminating video optical flow
+		imgPyrA = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
+		imgPyrB = cvCreateImage(_pyrSize, IPL_DEPTH_32F, 1);
+		double[] shift = opflow.processOpticalFlow(imgFirstThrown, imgFinalCaught, imgPyrA, imgPyrB, false);
+		cvReleaseImage(imgPyrA);
+		cvReleaseImage(imgPyrB);
 		System.out.println("xshift: " + shift[0]);
 		System.out.println("yshift: " + shift[1]);
 		shiftThrowCatch = shift;
