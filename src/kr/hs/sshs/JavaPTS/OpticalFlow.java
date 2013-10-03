@@ -31,14 +31,16 @@ public class OpticalFlow {
 	IplImage imgResult; // Result image
 
 	/**
-	 *
+	 * Process optical flow calculation from 2 successive frames<br>
+	 * and a Pyramid image to be used in the L-K method.<br>
 	 * @param imgPrev		8-bit single channel image of prev frame
 	 * @param imgCurr		8-bit single channel image of curr frame
-	 * @param imgPyrA		32-bit single channel image used to compute pyramid from prev frame
+	 * @param imgPyrA		32-bit single channel image used to store and compute pyramid from prev frame<br>
+	 * 						(if flag, pyramid will be read from this image)
 	 * @param imgPyrB		32-bit single channel image used to compute pyramid from curr frame
-	 * @param isPyrANeeded	true:  will use imgCurr of 1 cycle ago as imgPrev of now
+	 * @param isPyrANeeded	true:  will use imgCurr of 1 cycle ago as imgPrev of now<br>
 	 * 						false: will cvCreateImage a new one
-	 * @return double[] {xshift, yshift}
+	 * @return Returns the movement vector of the background in the form of double[] {xshift, yshift}
 	 */
 	public double[] processOpticalFlow(IplImage imgPrev, IplImage imgCurr, IplImage imgPyrA, boolean isPyrANeeded) {
 		CvSize _winSize = new CvSize(10,10);
