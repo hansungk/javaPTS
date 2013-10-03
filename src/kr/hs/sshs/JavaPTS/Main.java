@@ -119,7 +119,7 @@ public class Main {
 		recorder = new FFmpegFrameRecorder(PATH + "video/trash.mp4", 640, 480);
 		recorder.setFrameRate(30);
 		recorder.start();
-		grabber = new FFmpegFrameGrabber(PATH + "video/5.mp4");
+		grabber = new FFmpegFrameGrabber(PATH + "video/fort2.mp4");
 		grabber.start();
 
 		// Get frame size
@@ -232,7 +232,7 @@ public class Main {
 		//canvas7.dispose();
 		//canvas8.dispose();
 		canvas9.dispose();
-
+		
 		System.out.println("(TERMINATED)");
 	}
 
@@ -339,14 +339,17 @@ public class Main {
 			binary = scd.detectChange();
 		break;
 		case 'd' :
-			//Main_OpticalFlow flow = new Main_OpticalFlow();
+			Main_OpticalFlow flow = new Main_OpticalFlow();
 			
-			//double[] shift = flow.processOpticalFlow(imgBW_prev, imgBW, imgPyr, isPyrNeeded);
-			//SatChangeDetect.mX=(int)shift[0];
-			//SatChangeDetect.mY=(int)shift[1];
+			scd = new SatChangeDetect();
+			
+			
+			double[] shift = flow.processOpticalFlow(imgBW_prev, imgBW, imgPyr, isPyrNeeded);
+			SatChangeDetect.mX=(int)Math.round(shift[0]);
+			SatChangeDetect.mY=(int)Math.round(shift[1]);
+			System.out.println(SatChangeDetect.mX + " and " + SatChangeDetect.mY);
 			isPyrNeeded = false;
 			/// DETECTING VALUE CHANGE
-			scd = new SatChangeDetect();
 			scd.initialize(imgTmpl_prev, imgTmpl);
 			binary = scd.detectChange();
 			
@@ -382,12 +385,12 @@ public class Main {
 			binary = bl.print;
 			
 			//Print Blobs After Simple Blob filtering
-			/*for(int x = 0; x<width; x++){
+			for(int x = 0; x<width; x++){
 				for(int y = 0; y<height; y++){
 					if(binary[x][y]==0) cvSetReal2D(imgTemp,y,x,0);
 					else cvSetReal2D(imgTemp,y,x,255);
 				}
-			}*/
+			}
 			/// BLOB LABELING END
 
 			///
@@ -705,11 +708,11 @@ public class Main {
 			double angmove = Math.abs(Math.atan2(lastymove,lastxmove)-Math.atan2(prevymove,prevxmove));
 			if(angmove>Math.PI)
 				angmove=2*Math.PI-angmove;
-			if(Math.atan2(prevymove,prevxmove)>Math.PI /*&& cd.disturbed==0*/){
-				if(angmove>Math.PI/3){
+			//if(Math.atan2(prevymove,prevxmove)>Math.PI /*&& cd.disturbed==0*/){
+				if(angmove>Math.PI/6){
 					caught = true;
 				System.out.println("ang");}
-			}
+			//}
 			if(!caught /*&& cd.disturbed==0*/){
 				if (prevxmove * lastxmove < 0) {
 					if (Math.abs(lastxmove) > Math.abs(prevxmove)) {

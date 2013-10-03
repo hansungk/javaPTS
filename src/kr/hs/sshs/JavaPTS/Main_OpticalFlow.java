@@ -171,7 +171,7 @@ public class Main_OpticalFlow {
 			CvPoint p0 = new CvPoint((int)p0x, (int)p0y);
 			CvPoint p1 = new CvPoint((int)p1x, (int)p1y);
 
-			System.out.print("Status of " + (i+1) + " [" + p0.x() + "," + p0.y() + "]	: " + status[i]);
+			//System.out.print("Status of " + (i+1) + " [" + p0.x() + "," + p0.y() + "]	: " + status[i]);
 
 			if (status[i]==0) { 
 				System.out.println("	<<< Error -- Zero status");
@@ -238,7 +238,7 @@ public class Main_OpticalFlow {
 			if (distance < mindistance) mindistance = distance;
 			if (distance > maxdistance) maxdistance = distance;
 		}
-		int roomsCount = 100;
+		int roomsCount = 1000;
 		//double thetaInterval = (Math.PI / 180 ) * 5.0;		// 'Hard' interval (based on absolute theta)
 		double thetaInterval = (maxtheta - mintheta) / roomsCount;		// 'Soft' interval (based on interval counts)
 		//double thetaInterval = (Math.PI / 180 ) * 5.0;		// 'Hard' interval (based on absolute theta)
@@ -318,7 +318,7 @@ public class Main_OpticalFlow {
 		double probableDistance2 = dSum2 / biggestDRoomSize2;
 
 		// Massive sysouts
-		System.out.println();
+		/*System.out.println();
 		System.out.println("Maxtheta: " + maxtheta);
 		System.out.println("Mintheta: " + mintheta);
 		System.out.println("1st probable theta count: " + biggestTRoomSize1);
@@ -332,7 +332,7 @@ public class Main_OpticalFlow {
 		System.out.println("2nd probable distance count: " + biggestDRoomSize2);
 		System.out.println("1st probable distance AVG: " + probableDistance1);
 		System.out.println("2nd probable distance AVG: " + probableDistance2);
-		System.out.println();
+		System.out.println();*/
 		
 		// Tiny file writes
 		PrintWriter writer = new PrintWriter(PATH+"result.txt", "cp949");
