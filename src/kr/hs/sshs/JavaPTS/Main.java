@@ -152,7 +152,7 @@ public class Main {
 		recorder = new FFmpegFrameRecorder(PATH + "video/trash.mp4", 640, 480);
 		recorder.setFrameRate(30);
 		recorder.start();
-		grabber = new FFmpegFrameGrabber(PATH + "video/fort2.mp4");
+		grabber = new FFmpegFrameGrabber(PATH + "video/A.mp4");
 		grabber.start();
 
 		// Get frame size
@@ -349,8 +349,6 @@ public class Main {
 	* Process the image!
 	*/
 	public void process() {
-		width = imgTmpl.width();
-		height = imgTmpl.height();
 
 		cvCvtColor(imgTmpl, imgBW, CV_RGB2GRAY);
 		
@@ -835,7 +833,7 @@ public class Main {
 		cvCanny(imgFirstThrown2,imgFirstThrown2,80,200,3);
 		cvCanny(imgFirstThrown3,imgFirstThrown3,80,200,3);
 		
-		ballcrop = new CvRect(Math.max(ballfinal.x()-cropsize-(int)Math.round(shift[0]),0), Math.max(ballfinal.y()-cropsize-(int)Math.round(shift[1]),0), Math.min(2*cropsize,2*(width-ballfinal.x())), Math.min(2*cropsize,2*(height-ballfinal.y())));
+		ballcrop = new CvRect(Math.max(ballfinal.x()-cropsize-(int)Math.round(shift[0]),0), Math.max(ballfinal.y()-cropsize-(int)Math.round(shift[1]),0), Math.min(2*cropsize,2*(width-ballfinal.x()-1)), Math.min(2*cropsize,2*(height-ballfinal.y()-1)));
 		cvSetImageROI(imgFirstThrown, ballcrop);
 		imgCropped = cvCreateImage(cvGetSize(imgFirstThrown),IPL_DEPTH_8U,1);
 		cvCopy(imgFirstThrown,imgCropped);
@@ -848,16 +846,23 @@ public class Main {
 		imgCropped3 = cvCreateImage(cvGetSize(imgFirstThrown3),IPL_DEPTH_8U,1);
 		cvCopy(imgFirstThrown3,imgCropped3);
 		cvResetImageROI(imgFirstThrown3);
-		CvPoint Catcher = FixingCenterofCatcher.findCatcher(imgCropped, imgCropped2, imgCropped3, caughtBallCtr);
+		cvCopy(imgBW,imgCatcher);
+		cvSetImageROI(imgCatcher,ballcrop);
+		CvPoint Catcher = FixingCenterofCatcher.findCatcher(imgCropped, imgCropped2, imgCropped3, new CvPoint((int)Math.round(shift[0]), (int)Math.round(shift[1])), caughtBallCtr, cropsize, imgCatcher);
 		if(Catcher == null){
 			System.out.println("Sorry. We couldn't recognize the catcher.");
+			cvResetImageROI(imgCatcher);
 			return null;
 		}
-		Catcher.x(Catcher.x()+ballfinal.x()-cropsize);
-		Catcher.y(Catcher.y()+ballfinal.y()-cropsize);
+		
+		Catcher.x(Catcher.x()+ballfinal.x()-cropsize-(int)Math.round(shift[0]));
+		Catcher.y(Catcher.y()+ballfinal.y()-cropsize-(int)Math.round(shift[1]));
 		System.out.println("x : " + Catcher.x() + " y : " + Catcher.y());
-		cvCopy(imgBW,imgCatcher);
-		cvRectangle(imgCatcher,new CvPoint(Math.max(Catcher.x()-10,0),Math.max(Catcher.y()-15,0)),new CvPoint(Math.min(Catcher.x()+10,width-1),Math.min(Catcher.y()+15,height-1)),new CvScalar(255,255,255,0),1,8,0);
+		
+		cvResetImageROI(imgCatcher);
+		
+		cvRectangle(imgCatcher,new CvPoint(Math.max(Catcher.x()-10,0),Math.max(Catcher.y()-15,0)),new CvPoint(Math.min(Catcher.x()+10,width-1),Math.min(Catcher.y()+15,height-1)),new CvScalar(100,100,100,0),1,8,0);
+		cvRectangle(imgCatcher,new CvPoint(Math.max(caughtBallCtr.x()-3,0),Math.max(caughtBallCtr.y()-3,0)),new CvPoint(Math.min(caughtBallCtr.x()+3,width-1),Math.min(caughtBallCtr.y()+3,height-1)),new CvScalar(50,50,50,0),1,8,0);
 		//cvRectangle(imgCatcher,new CvPoint(50,50),new CvPoint(100,100),new CvScalar(180,180,180,0),1,8,0);
 		
 		cvReleaseImage(imgCropped);

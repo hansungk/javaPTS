@@ -57,7 +57,7 @@ public class CatcherDetect {
 						bin[i][y]=0;
 						//bin[i][y+1]=0;
 						//cvSetReal2D(bw,y-1,i,0);
-						cvSetReal2D(bw,y,i,0);
+						//cvSetReal2D(bw,y,i,0);
 						//cvSetReal2D(bw,y+1,i,0);
 					}
 				}
@@ -225,7 +225,7 @@ public class CatcherDetect {
 				}
 			}
 			//}
-			cvRectangle(bw,new CvPoint(pX+lMax,pY),new CvPoint(pX+rMax,pY+hMax),new CvScalar(180,180,180,0),1,8,0);
+			//cvRectangle(bw,new CvPoint(pX+lMax,pY),new CvPoint(pX+rMax,pY+hMax),new CvScalar(180,180,180,0),1,8,0);
 		
 			centers.add(new CvPoint(((2*pX+lMax+rMax)/2),((2*pY+hMax)/2)));
 		}
